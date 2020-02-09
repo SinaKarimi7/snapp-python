@@ -318,6 +318,52 @@ An important thing to realize is that the contents of a variable can be changed,
 ```
 Ideally, we wouldn't change the contents of a variable called `my_str` to be an `int`, but it is something that Python would let us do.
 
+One last thing to remember about variables is that they are just a name for an object. If you create a new variable and assign it to an old variable, then both of them are the names of the same object and we can use both names to reach to same object.
+If we reassign any of the variables to another object, we just use this name for another object and old variable will remain the name of the old object.
+```python
+>>> my_str = 1
+>>> my_int = my_str
+>>> my_str = "testing"
+>>> print(my_int)
+1
+>>> print(my_str)
+testing
+```
+But if you use any function that modify the object itself, then you can see the change but any of the name
+```python
+>>> name1 = [1, 2, 3]
+>>> name2 = name1
+>>> id(name1) # This will be different in each execution of the script. but it will remain constant while it name the same object.
+140168663471048
+>>> id(name2) # This will also be a different value in each execution but have the same value as id(name1) because both of them name the same object for now
+140168663471048
+>>> name2
+[1, 2, 3]
+>>> name1.pop()
+3
+>>> name2
+[1, 2]
+>>> name1 += [3, 4]
+>>> id(name1) # Note that object is not changed
+140168663471048
+>>> name2
+[1, 2, 3, 4]
+>>> name1 = [4, 5]
+>>> id(name1)
+140168663473224
+>>> name2
+[1, 2]
+```
+In case of immutable objects, even when we think we have changed the object, actually python have created another object for us and replaced the original object with it.
+```python
+>>> my_str = "This"
+>>> id(my_str)
+140168663441848
+>>> my_str += ' is'
+>>> id(my_str)    # Note that id is changed, so name `my_str` now point to a different object.
+140168663441960
+```
+
 One last thing to remember is that if we assign a variable with another variable it will be assigned to the result of the variable and not whatever that varible points to later.
 ```python
 >>> my_str = 1
@@ -934,3 +980,620 @@ Age of: 40
 Person Named: kayla
 Age of: 21
 ```
+
+### Functions
+Being able to write code that we can call multiple times without repeating ourselves is one of the most powerful things that we can do when programming. In python a block of code that can executed multiple times is called a function.
+
+#### [Defining functions](https://docs.python.org/3/tutorial/controlflow.html#defining-functions)
+We can create functions in Python using the following:
+
+- The `def` keyword
+- The function name - starting with a letter or underscore `_` and continue with a letter, a digit or underscore `_`
+- Left parenthesis `(`
+- 0 or more argument names
+- Right parenthesis `)`
+- A colon `:`
+- An indented function body
+```python
+>>> def say_hello():
+...     print('Hello from function')
+...
+>>> say_hello()
+Hello from function
+```
+If we want to have an argument for function, we just name that argument using a variable.
+```python
+>>> def say_hello(name):
+...     print(f'Hello {name!r}')
+...
+>>> say_hello('Mehdi')
+Hello 'Mehdi'
+```
+Functions also return a result, so we can assign the result of function execution to a variable.
+```python
+>>> def say_hello(name):
+...     print(f'Hello {name!r}')
+...
+>>> result = say_hello('Mehdi')
+>>> result
+>>>
+```
+Since we didn't explicitly returned any value from the function, result of the function is `None`. We can return a result from the function using `return` keyword.
+```python
+>>> def say_hello(name):
+...     return f'Hello {name!r}'
+...
+>>> result = say_hello('Mehdi')
+>>> print(result)
+Hello 'Mehdi'
+```
+
+#### Working with Multiple Arguments
+In a function we can have as many argument as required.
+```python
+>>> def add(num1, num2):
+...     return num1 + num2
+...
+>>> print(add(100, 200))
+300
+>>> print(add('Add ', 'strings'))
+Add strings
+```
+Sometimes you may want to have an unlimited number of arguments, this is also possible in python.
+```python
+>>> def add(*args):
+...     result = None
+...     for arg in args:
+...         if result is None:
+...             result = arg
+...         else:
+...             result += arg
+...     return result
+...
+>>> print(add(100, 200, 300, 400))
+1000
+>>> print(add('Add ', 'multiple ', 'strings'))
+Add multiple strings
+```
+
+#### Using Keyword Arguments
+Every function call we've made up to this point has used what are known as positional arguments, but if we know the name of the arguments and not necessarily the positions we can call them all using keyword arguments like so:
+```python
+>>> def contact_card(name, age, car_model):
+...     return f"{name} is {age} and drives a {car_model}"
+...
+>>> contact_card("Keith", 29, "Honda Civic")
+'Keith is 29 and drives a Honda Civic'
+>>> contact_card(age=29, car_model="Civic", name="Keith")
+'Keith is 29 and drives a Civic'
+>>> contact_card("Keith", car_model="Civic", age="29")
+'Keith is 29 and drives a Civic'
+>>> contact_card(age="29", "Keith", car_model="Civic")
+  File "<stdin>", line 1
+SyntaxError: positional argument follows keyword argument
+```
+When we're using position and keyword arguments, every argument after the first keyword argument must also be a keyword argument. It's sometimes useful to mix them, but often times we'll use either all positional or all keyword.
+
+Somethimes you don't want a variable to accidentally assigned a value(or simply can't), for example in our *contact_card* function we may want to have a *format* argument that user can only pass it by name.
+```python
+>>> def contact_card(name, age, car_model, *, format):
+...     if format == 'simple':
+...         return f"{name} is {age} and drives a {car_model}"
+...     else:
+...         return(
+...             f"name: {name}\n"
+...             f"age: {age}\n"
+...             f"car model: {car_model}" )
+...
+>>> print(contact_card("Keith", 29, "Honda Civic", 'advanced'))
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: contact_card() takes 3 positional arguments but 4 were given
+>>> print(contact_card("Keith", 29, "Honda Civic", format='simple'))
+Keith is 29 and drives a Honda Civic
+>>> print(contact_card("Keith", 29, "Honda Civic", format='advanced'))
+name: Keith
+age: 29
+car model: Honda Civic
+```
+As we could handle infinite amount of positional arguments we may also handle unknown keyword arguments.
+```python
+>>> def contact_card(name, age, car_model, *, **kwargs):
+...     result = f"name: {name}\nage: {age}\ncar model: {car_model}"
+...     for key, value in kwargs:
+...         result += f"{key}: {value}" )
+...     return result
+...
+>>> print(contact_card("Keith", 29, "Honda Civic", job='Developer', phone=12345678, married=False))
+name: Keith
+age: 29
+car model: Honda Civic
+job: Developer
+phone: 12345678
+married: False
+```
+
+#### Defining Default Arguments
+Along with being able to use keyword arguments when we're calling a function, we're able to define default values for arguments to make them optional when the information is commonly known and the same. To do this, we use the assignment operator (=) when we're defining the argument.
+```python
+>>> def contact_card(name, age, car_model = None, *, format='simple'):
+...     if format == 'simple':
+...         if car_model is None:
+...             return f"{name} is {age} and does not have a car"
+...         return f"{name} is {age} and drives a {car_model}"
+...     else:
+...         result = f"name: {name}\nage: {age}\n"
+...         if car_model is not None:
+...             result += f"car model: {car_model}"
+...         return result
+...
+>>> print(contact_card("Keith", 29))
+Keith is 29 and does not have a car
+>>> print(contact_card("Keith", 29, "Honda Civic"))
+Keith is 29 and drives a Honda Civic
+>>> print(contact_card("Keith", 29, format='advanced'))
+name: Keith
+age: 29
+>>> print(contact_card("Keith", 29, "Honda Civic", format='advanced'))
+name: Keith
+age: 29
+car model: Honda Civic
+```
+Not that we can still use a value for the argument if we want to, but it will use a default value if we omit that variable.
+
+In **python 3.8** we have another option in writing a function, we can force an argument to be only available as positional argument.
+```python
+>>> def get_length(obj, /): return len(obj)
+...
+>>> get_length([1, 2, 3])
+3
+>>> get_length(obj=[1, 2, 3])
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: get_length() got some positional-only arguments passed as keyword arguments: 'obj'
+```
+
+### [Classes](https://docs.python.org/3/tutorial/classes.html#classes)
+The next step in our programming journey requires us to think about how we can model concepts from our problem's domain. To do that, we'll often use classes to create completely new data types. In this lesson, we'll create our very first class and learn how to work with its data and functionality.
+
+#### Defining classes
+Up to this point, we've been working with the built-in types that Python provides (`str`, `int`, `float`, etc.), but when we're modeling problems in our programs we often want to have more complex objects that fit our problem's domain. For instance, if we were writing a program to model information about cars (for an automotive shop) then it would make sense for us to have an object type that represents a car. This is where we start working will classes.
+
+From this point on, most of the code that we'll be writing will be in files. Let's create a *learning_python* directory to hold these files that are really only there to facilitate learning.
+```shell
+$ mkdir ~/learning_python
+$ cd ~/learning_python
+```
+
+For this lesson, we'll use a file called **creating_classes.py**. Our goal is to model a car that has *tires* and an *engine*. To create a class we use the `class` keyword, followed by a name for the class, starting with a *capital* letter. Let's create our first class, the Car class:
+
+~/learning_python/creating_classes.py:
+```python
+class Car:
+    """
+    Docstring describing the class
+    """
+
+    def __init__(self):
+        """
+        Docstring describing the method
+        """
+        pass
+```
+
+This is an incredibly simple `class`. A few things to note here are that by adding a triple-quoted string right under the definition of the `class` and also right under the definition of a `method`/`function` we can add documentation. This documentation is nice because we can even add examples in this string that can be run as tests to help ensure that our documentation stays up to date with the implementation.
+
+A `method` is a function that is defined within the context of an object, and Python classes can define special functions that start with double underscores `__`, such as the `__init__` method. This method overrides the initializer of the `class`. The initializer is what is used when we initialize a new instance of our `class` by running code like this:
+```python
+>>> my_car = Car()
+```
+We would like our **Car** class to hold onto a few pieces of data, the *tires*, and an *engine*. For the time being, we're just going to have those be a `list` of strings for the *tires* and a string for the *engine*. Let's modify our `__init__` method to receive engine and tires as arguments:
+
+~/learning_python/creating_classes.py:
+```python
+class Car:
+    """
+    Car models a car w/ tires and an engine
+    """
+
+    def __init__(self, engine, tires):
+        self.engine = engine
+        self.tires = tires
+```
+
+##### What is `self`?
+A big change from writing functions to writing methods is the presence of `self`. This variable references the individual instance of the `class` that we're working with. The **Car** `class` holds on to the information about cars in general in our program, where an instance of the **Car** `class` (`self`) could represent my Mercedes specifically. Let's load our `class` into the REPL using python3 -i creating_classes.py, and then we'll be able to create a Mercedes:
+```python
+$ python3 -i creating_classes.py
+>>> mercedes = Car('4-cylinder', ['front-driver', 'front-passenger', 'rear-driver', 'rear-passenger'])
+>>> mercedes.tires
+['front-driver', 'front-passenger', 'rear-driver', 'rear-passenger']
+>>> mercedes.engine
+'4-cylinder'
+```
+Once we have our instance, we're able to access our internal attributes by using a period (`.`).
+
+##### Defining a Custom Method
+The last thing that we'll do, to round out the first rendition of our first `class`, is to define a method that prints a description of the car to the screen:
+
+~/learning_python/creating_classes.py
+```python
+class Car:
+    """
+    Car models a car w/ tires and an engine
+    """
+
+    def __init__(self, engine, tires):
+        self.engine = engine
+        self.tires = tires
+
+    def description(self):
+        print(f"A car with an {self.engine} engine, and {self.tires} tires")
+```
+Our description method doesn't have any actual arguments, but we pass the instance in as `self`. From there, we can access the instance's attributes by calling `self`.ATTRIBUTE_NAME.
+
+Let's use this new method:
+```python
+$ python3 -i creating_classes.py
+>>> honda = Car('4-cylinder', ['front-driver', 'front-passenger', 'rear-driver', 'rear-passenger'])
+>>> honda.engine
+'4-cylinder'
+>>> honda.tires
+['front-driver', 'front-passenger', 'rear-driver', 'rear-passenger']
+>>> honda.description
+<bound method Car.description of <__main__.Car object at 0x7fb5f3fbbda0>>
+>>> honda.description()
+A car with a 4-cylinder engine, and ['front-driver', 'front-passenger', 'rear-driver', 'rear-passenger'] tires
+```
+Just like a normal function, if we don't use parenthesis the method won't execute.
+
+
+#### Composition
+With one custom class under our belt, we're ready to think about how we can use classes together to create full-featured domain models. In this lesson, we'll create another class and utilize it with our **Car** `class`.
+
+##### Modeling the Tire
+Currently, our **Car** class has *tires* and an *engine*, but they're all strings and don't really hold the information that we'd expect. For a *tire*, it should probably have these attributes:
+
+- brand - The brand of the tire.
+- tire_type - The type of the tire (valid options: None, 'P', 'LT'). We're not using type as the name because it's a name of the built-in function.
+- width - The tire width in millimeters
+- ratio - The ratio of the tire height to its width. A percentage represented as an integer.
+- construction - How the tire is constructed. The default (and only) option is 'R'.
+- diameter - The diameter of the wheel in inches.
+Let's model our tire by creating a Tire class. We'll create this class in its own file (next to creating_classes.py) called *tire.py*  :
+
+~/learning_python/tire.py
+```python
+class Tire:
+    """
+    Tire represents a tire that would be used with an automobile.
+    """
+
+    def __init__(self, tire_type, width, ratio, diameter, brand='', construction='R'):
+        self.tire_type = tire_type
+        self.width = width
+        self.ratio = ratio
+        self.diameter = diameter
+        self.brand = brand
+        self.construction = construction
+```
+Now we have a way to represent an individual *tire*. Let's go into the REPL and pass a list of **Tire** instances as tires when we create a **Car**:
+```python
+$ python3 -i creating_classes.py
+>>> from tire import Tire
+>>> tire = Tire('P', 205, 55, 15)
+>>> tires = [tire, tire, tire, tire]
+>>> honda = Car(tires=tires, engine='4-cylinder')
+>>> honda.description()
+A car with a 4-cylinder engine, and [<tire.Tire object at 0x7ff1b0a7fe48>, <tire.Tire object at 0x7ff1b0a7fe48>, <tire.Tire object at 0x7ff1b0a7fe48>, <tire.Tire object at 0x7ff1b0a7fe48>] tires
+```
+A few things to note here:
+
+To load an additional file into the REPL, we were able to reference it by name using from \[FILE_NAME_MINUS_EXTENSION] **import** \[CLASS/FUNCTION/VARIABLE]. We'll learn more about loading code from other modules and packages when we look into the standard library, but this is handy for now.
+We created a `list` of tires by using the same tire variable 4 times.
+The printing of each tire isn't very readable, and we can see that each item points to the same tire in memory (based on the at *0x7ff1b0a7fe48*).
+Before we discuss composition, let's improve this print out by adding a new double underscore method to the Tire class: the `__repr__` method. The `__repr__` method specifies what should be returned when an instance of the `class` is passed to the `repr` function, but also when it printed as part of another object being printed.
+
+~/learning_python/tire.py
+```python
+class Tire:
+    """
+    Tire represents a tire that would be used with an automobile.
+    """
+
+    def __init__(self, tire_type, width, ratio, diameter,
+                 brand='', construction='R'):
+        self.tire_type = tire_type
+        self.width = width
+        self.ratio = ratio
+        self.diameter = diameter
+        self.brand = brand
+        self.construction = construction
+
+    def __repr__(self):
+        """
+        Represent the tire's information in the standard notation present
+        on the side of the tire. Example: 'P215/65R15'
+        """
+        return (f"{self.tire_type}{self.width}/{self.ratio}"
+                + f"{self.construction}{self.diameter}")
+```
+Now if we repeat the process of creating a car with some tires:
+```python
+$ python3 -i creating_classes.py
+>>> from tire import Tire
+>>> tire = Tire('P', 205, 55, 15)
+>>> tires = [tire, tire, tire, tire]
+>>> honda = Car(tires=tires, engine='4-cylinder')
+>>> honda.description()
+A car with a 4-cylinder engine, and [P205/55R15, P205/55R15, P205/55R15, P205/55R15] tires
+```
+Note: If we were just printing the tire by itself then it would use the `__str__` method, and since we didn't implement that, it internally uses the `__repr__` method.
+
+##### What is Composition?
+What we just did is use "composition" to build up our **Car** `class` by passing in **Tire** objects. One of the big ideas behind *composition* is that we can keep our classes focused on the behaviors and state that pertain to itself, and if it needs functionality from a different object we can *inject* those. The beautiful thing about *composition* is that it allows us to have a clean separation of concerns between our objects, and lets us reuse them. To show the power of *composition*, let's add a *circumference* method to our **Tire** class:
+
+~/learning_python/tire.py
+```python
+import math
+
+class Tire:
+    """
+    Tire represents a tire that would be used with an automobile.
+    """
+
+    def __init__(self, tire_type, width, ratio, diameter, brand='', construction='R'):
+        self.tire_type = tire_type
+        self.width = width
+        self.ratio = ratio
+        self.diameter = diameter
+        self.brand = brand
+        self.construction = construction
+
+    def circumference(self):
+        """
+        The circumference of the tire in inches.
+
+        >>> tire = Tire('P', 205, 65, 15)
+        >>> tire.circumference()
+        80.1
+        """
+        side_wall_inches = (self.width * (self.ratio / 100)) / 25.4
+        total_diameter = side_wall_inches * 2 + self.diameter
+        return round(total_diameter * math.pi, 1)
+
+    def __repr__(self):
+        """
+        Represent the tire's information in the standard notation present
+        on the side of the tire. Example: 'P215/65R15'
+        """
+        return (f"{self.tire_type}{self.width}/{self.ratio}"
+                + f"{self.construction}{self.diameter}")
+```
+Now we can use this method within our **Car** `class` by adding a *wheel_circumference* method:
+
+~/learning_python/creating_classes.py
+```python
+class Car:
+    """
+    Car models a car w/ tires and an engine
+    """
+
+    def __init__(self, engine, tires):
+        self.engine = engine
+        self.tires = tires
+
+    def description(self):
+        print(f"A car with a {self.engine} engine, and {self.tires} tires")
+
+    def wheel_circumference(self):
+        if len(self.tires) > 0:
+            return self.tires[0].circumference()
+        else:
+            return 0
+```
+This is the power of *composition*. Our **Car** `class` doesn't need to know how to calculate the *circumference* of its wheels (which makes sense, since you can swap out wheels on a car).
+```python
+$ python3 -i creating_classes.py
+>>> from tire import Tire
+>>> tire = Tire('P', 205, 65, 15)
+>>> tires = [tire, tire, tire, tire]
+>>> honda = Car(tires=tires, engine='4-cylinder')
+>>> honda.wheel_circumference()
+80.1
+>>> honda.tires = []
+>>> honda.wheel_circumference()
+0
+```
+
+#### A Quick Look at [Doctests](https://docs.python.org/3.7/library/doctest.html)
+You may have noticed the extra content that was added to the docstring of our *circumference* method. This is actually so that we can ensure our implementation works. We've simulated how we would use this code in the REPL, and we can use the `doctest` module to evaluate this, ensuring that the output would match the 80.1 we're expecting. Here's how we would run this:
+```shell
+$ python3 -m doctest -v tire.py
+Trying:
+    tire = Tire('P', 205, 65, 15)
+Expecting nothing
+ok
+Trying:
+    tire.circumference()
+Expecting:
+    80.1
+ok
+4 items had no tests:
+    tire
+    tire.Tire
+    tire.Tire.__init__
+    tire.Tire.__repr__
+1 items passed all tests:
+   2 tests in tire.Tire.circumference
+2 tests in 5 items.
+2 passed and 0 failed.
+Test passed.
+```
+
+#### [Inheritance](https://docs.python.org/3.7/tutorial/classes.html#inheritance)
+*Composition* is a very powerful tool for code reuse, but one of the other tools that we have at our disposal is *inheritance*. *Inheritance* allows us to create new classes that add or modify the behavior of existing classes. In this lesson, we'll create a different type of **Tire**.
+
+##### Using Inheritance to Customize an Existing Class
+Our existing **Tire** implementation does exactly what we need it to do for a general car tire, but there are other, more specific types of tires, such as *racing slicks* or *snow* tires. If we wanted to model these other types of tires, we could use our existing **Tire** class as a start by "inheriting" its existing implementation. Let's add a new **SnowTire** class to our tire.py file:
+
+~/learning_python/tire.py
+```python
+import math
+
+class Tire:
+    """
+    Tire represents a tire that would be used with an automobile.
+    """
+
+    def __init__(self, tire_type, width, ratio, diameter, brand='', construction='R'):
+        self.tire_type = tire_type
+        self.width = width
+        self.ratio = ratio
+        self.diameter = diameter
+        self.brand = brand
+        self.construction = construction
+
+    def circumference(self):
+        """
+        The circumference of a tire in inches.
+
+        >>> tire = Tire('P', 205, 65, 15)
+        >>> tire.circumference()
+        80.1
+        """
+        side_wall_inches = self._side_wall_inches()
+        total_diameter = side_wall_inches * 2 + self.diameter
+        return round(total_diameter * math.pi, 1)
+
+    def __repr__(self):
+        """
+        Represent the tire's information in the standard notation present
+        on the side of the tire. Example: 'P215/65R15'
+        """
+        return (f"{self.tire_type}{self.width}/{self.ratio}"
+                + f"{self.construction}{self.diameter}")
+
+    def _side_wall_inches(self):
+        return (self.width * (self.ratio / 100)) / 25.4
+
+class SnowTire(Tire):
+    def __init__(self, tire_type, width, ratio, diameter, chain_thickness, brand='', construction='R'):
+        Tire.__init__(self, tire_type, width, ratio, diameter, brand, construction)
+        self.chain_thickness = chain_thickness
+
+    def circumference(self):
+        """
+        The circumference of a tire w/ show chains in inches.
+
+        >>> tire = SnowTire('P', 205, 65, 15, 2)
+        >>> tire.circumference()
+        92.7
+        """
+        side_wall_inches = self._side_wall_inches()
+        total_diameter = (side_wall_inches + self.chain_thickness) * 2 + self.diameter
+        return round(total_diameter * math.pi, 1)
+```
+We used another `doctest` here to show the usage of our **SnowTire**.*circumference* method. If we print a **SnowTire** instance it will automatically use the `__repr__` implementation from the **Tire** `class` because we inherited all of the behavior of the **Tire** `class`. We customized both the `__init__` and *circumference* methods to handle the changes that the *chain_thickness* value adds. Because the calculation of the tire sidewall thickness is a little complicated, we extracted that into a separate "private" method so that we could use it in both implementations (the method name starts with a single underscore).
+
+##### Using super()
+The *circumference* method is a situation where we needed to make a modification midway through the calculation, so it made more sense to extract a helper method and write a whole new implementation. But most of the time when we're working with *inheritance* it's because we do want most of the initial implementation. In these situations, we have access to the `super` function that allows us to utilize the method implementations from our parent class. As it stands right now, our **SnowTire** `class` will display itself in the same way as the **Tire** class, but we'd like to distinguish them when they're printed out. To do this, we'll override the `__repr__` method, but we want to simply add a *(Snow)* to the end of the original information. Let's utilize `super` to accomplish this:
+
+~/learning_python/tire.py
+```python
+# Implementation of Tire omitted
+
+class SnowTire(Tire):
+    def __init__(self, tire_type, width, ratio, diameter, chain_thickness, brand='', construction='R'):
+        Tire.__init__(self, tire_type, width, ratio, diameter, brand, construction)
+        self.chain_thickness = chain_thickness
+
+    def circumference(self):
+        """
+        The circumference of a tire w/ show chains in inches.
+
+        >>> tire = SnowTire('P', 205, 65, 15, 2)
+        >>> tire.circumference()
+        92.7
+        """
+        side_wall_inches = self._side_wall_inches()
+        total_diameter = (side_wall_inches + self.chain_thickness) * 2 + self.diameter
+        return round(total_diameter * math.pi, 1)
+
+    def __repr__(self):
+        return super().__repr__() + " (Snow)"
+```
+This implementation is clean, and allows us to avoid repeating ourselves just to add a small modification to the `__repr__` output. Additionally, we can (and should) use `super` as part of the `__init__` customizations that we made earlier. The existing implementation was how it would be done in Python 2, and you might see it from time to time. But in Python 3, we can leverage `super` in the exact way that we did with `__repr__`. Let's clean up our `__init__` method:
+~/learning_python/tire.py
+
+```python
+# Implementation of Tire omitted
+
+class SnowTire(Tire):
+    def __init__(self, tire_type, width, ratio, diameter, chain_thickness, brand='', construction='R'):
+        super().__init__(tire_type, width, ratio, diameter, brand, construction)
+        self.chain_thickness = chain_thickness
+
+    def circumference(self):
+        """
+        The circumference of a tire w/ show chains in inches.
+
+        >>> tire = SnowTire('P', 205, 65, 15, 2)
+        >>> tire.circumference()
+        92.7
+        """
+        side_wall_inches = self._side_wall_inches()
+        total_diameter = (side_wall_inches + self.chain_thickness) * 2 + self.diameter
+        return round(total_diameter * math.pi, 1)
+
+    def __repr__(self):
+        return super().__repr__() + " (Snow)"
+```
+The only real differences are that instead of using the **Tire** constant, we call `super()` and we also don't need to pass self into the call to `__init__`. Using `super` allows us to contain the details about our *superclass* to the initial declaration, and if we end up changing our *superclass* later on we won't need to modify other spots where we hardcoded the *superclass*'s name.
+
+
+#### Polymorphism
+Composition works really well for allowing us to reuse code, and one of the other things that it allows us to do is swap out the dependencies that we pass in. This process works because of the idea of *polymorphism*. In this lesson, we'll learn what *polymorphism* is and how it's used.
+
+##### What is Polymorphism?
+*Polymorphism* is a pretty strange word that gets used fairly often when talking about object-oriented programming. Thankfully, the concept of *polymorphism* isn't as complicated as the name would imply. Our **Car** `class` is currently taking in a `list` of **Tire** objects, but do they need to be **Tire** instances? Let's take a look at every interaction with the tire instances that happens within the **Car** `class`'s implementation:
+
+~/learning_python/creating_classes.py
+```python
+class Car:
+    """
+    Car models a car w/ tires and an engine
+    """
+
+    def __init__(self, engine, tires):
+        self.engine = engine
+        self.tires = tires
+
+    def description(self):
+        print(f"A car with a {self.engine} engine, and {self.tires} tires")
+
+    def wheel_circumference(self):
+        if len(self.tires) > 0:
+            return self.tires[0].circumference()
+        else:
+            return 0
+```
+We interact with the tires in two spots:
+
+- When printing in the description method
+- By calling the *circumference* method within *wheel_circumference*
+If instead of **Tire** instances we used strings for the tires attribute, then we would run into issues because the `str` type doesn't have a `circumference` method. Since variables aren't statically typed in Python (they aren't bound to one specific type) the only thing that we need to do to have our **Car** `class` work is to pass in tires that meet these requirements:
+
+- They can be printed
+- They implement the `circumference` method
+This is **polymorphism**. It's the idea that we can make different data structures work together so long as the method requirements between them are met. It means that we can pass **SnowTire** instances into a **Car** class where we were currently using **Tire** instances, and there would be no errors or issues.
+```python
+$ python3 -i creating_classes.py
+>>> from tire import SnowTire
+>>> tire = SnowTire('P', 205, 65, 15, 2)
+>>> tires = [tire, tire, tire, tire]
+>>> honda = Car(tires=tires, engine='4-cylinder')
+>>> honda.wheel_circumference()
+92.7
+```
+Technically, we could create a class called **Circle** that also implements a *circumference* method, and that would also work as a "tire" because of **polymorphism**.
