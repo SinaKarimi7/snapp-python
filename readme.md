@@ -1597,3 +1597,144 @@ $ python3 -i creating_classes.py
 92.7
 ```
 Technically, we could create a class called **Circle** that also implements a *circumference* method, and that would also work as a "tire" because of **polymorphism**.
+
+### Workshop 1
+Python is an object-oriented programming language, and lends itself to modeling problems using objects. In this workshop, we'll be implementing a few different classes in order to create a *todo* list. The project has been documented with *automated tests* to help us verify that the code we've written will meet the requirements.
+
+By the time we're finished with this, we should be more comfortable creating classes and implementing methods on those classes.
+
+#### `Todo` class
+The *Todo* class holds onto a few pieces of information:
+
+* name: The name of the *todo*
+* description: The description of the *todo*
+* points: The difficulty/importance rating as an *integer* greater than zero
+* completed: Whether or not the todo has been completed as a *boolean*
+
+#### `TodoList` class
+The *TodoList* class only receives one argument and implements more functionality:
+
+* todos: A list of `Todo` objects
+* functionalities:
+
+  * `average_points`: Calculate the average of the points for all of the `Todo` objects. The formula for calculating the average is *sum_of_points* / *number_of_todos*.
+  * `completed`: Return list of all completed todos.
+  * `incomplete` Return list of all incomplete todos.
+
+### [Modules](https://docs.python.org/3/tutorial/modules.html)
+In python everything is defined in a module, you may think of a module as a file that contains a set of variables, functions and classes and all this useful things that defined in this module is accessible by someone else by loading and using this module.
+
+Writing a module is very useful, bu writing everything is very hard an time consuming. Fortunately one of Python's great strengths is that it comes with a standard library containing many useful modules. In this lesson, we'll learn the various ways that we can use modules, and we'll also take a look at some of the commonly used modules.
+
+We've already utilized a standard library package when we used the `math` module to calculate the *circumference* of a **tire**. We used one of the variables from the `math` module in the form of `pi`, but we loaded the entire module using this line:
+```python
+import math
+```
+
+Using `import` we're able to access the internals of the module, by chaining off of the `module`'s name as we did with `pi` using `math.pi`, but there are other ways we could have accessed `pi`. Let's take a look at some of our options:
+
+* `from math import pi` - We can access `pi` by itself, and we can't reference `math` because we used a selective `import`.
+* `from math import pi as p` - This would allow us to have access to a `p` variable that contains the value of `pi`.
+* `from math import pi, floor, ceil` - This would selectively `import` the pi variable, the `floor` function, and the `ceil` function.
+* `from math import *` - This would *import* EVERYTHING (except names starting with an _underscore_) from the `math` module into the current namespace. **Avoid doing this if possible**.
+
+#### Useful Standard Library Modules
+Here are some of the most useful standard library modules that we'll use throughout the remainder of the course.
+
+* [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) - for creating CLIs
+* [json](https://docs.python.org/3/library/json.html#module-json) - for working with JSON
+* [math](https://docs.python.org/3/library/math.html#module-math) - for doing math operations
+* [os](https://docs.python.org/3/library/os.html#module-os) - for interacting with operating system resources
+* [sys](https://docs.python.org/3/library/sys.html#module-sys) - for interacting with system specific parameters and functions
+
+### Working with Third-Party Packages
+The standard library is great, but the vast quantity of third-party packages in the Python ecosystem is also at our disposal. In this lesson, we'll learn how to install Python packages and separate our dependencies using a *virtualenv*.
+
+#### [Using `pip` to Install Packages](https://pip.pypa.io/en/stable/)
+As a language with strong open-source roots, Python has a very large repository of open-source packages that can be installed for our use. Thankfully, this repository is easy for us to use, and when we installed Python we were even given the tool to install packages. The simplest tool that we have is `pip`. Since we have more than one Python installation, we need to make sure that we're using the version of `pip` that corresponds to the version of Python that we would like to install the package for. With **Python 3.7**, we'll use **pip3.7**. Let's install our first package, the [requests](https://realpython.com/python-requests/):
+```shell
+$ pip3.7 install requests
+...
+Installing collected packages: idna, urllib3, chardet, certifi, requests
+Could not install packages due to an EnvironmentError: [Errno 13] Permission denied: '/usr/local/lib/python3.7/site-packages/certifi'
+Consider using the `--user` option or check the permissions.
+$
+```
+There's an error because we don't have permissions to install a package globally unless we use `sudo`. If we do use `sudo`, then any other user on the system that could use our Python 3.7 install would also have access to **requests**. An alternative approach is to install the package into a directory for packages only for our user using the *--user* flag when installing. Let's install the package locally to our user:
+```shell
+$ pip3.7 install --user requests
+Collecting requests
+...
+Installing collected packages: idna, urllib3, chardet, certifi, requests
+Successfully installed certifi-2019.11.28 chardet-3.0.4 idna-2.8 requests-2.22.0 urllib3-1.25.8
+$
+```
+The **requests** package has some dependencies, so `pip` also installed those as part of the installation process.
+
+#### Viewing Installed Packages
+If we want to view the packages that are already installed we'll also use the `pip` for that using the `pip freeze` command:
+```shell
+$ pip3.7 freeze
+blinker==1.3
+certifi==2019.11.28
+chardet==3.0.4
+command-not-found==0.3
+configobj==5.0.6
+cryptography==1.2.3
+idna==2.8
+Jinja2==2.8
+jsonpatch==1.10
+jsonpointer==1.9
+language-selector==0.1
+MarkupSafe==0.23
+oauthlib==1.0.3
+prettytable==0.7.2
+pyasn1==0.1.9
+pycurl==7.43.0
+pygobject==3.20.0
+PyJWT==1.3.0
+pyserial==3.0.1
+python-apt==1.1.0b1
+python-debian==0.1.27
+python-systemd==231
+requests==2.22.0
+six==1.10.0
+ssh-import-id==5.5
+ufw==0.35
+unattended-upgrades==0.1
+urllib3==1.25.8
+```
+Since we installed **requests** with the `--user` flag, we'll still see it in this list. But a different user would not. The `freeze` subcommand gives us the information in a format that puts into a file, and then that file could be used to install packages with the specific version. Here's what that would look like:
+```shell
+$ pip3.7 freeze > requirements.txt
+$ pip3.7 install --user -r requirements.txt
+...
+```
+
+#### Creating a `virtualenv`
+If you're working on multiple packages that have varying dependency requirements, you can run into issues if you're installing packages either globally or localized to a user. Python's solution to this is what's known as a "**virtualenv**" (for "virtual environment"). A **virtualenv** is a localized Python install with its own packages, and it can be activated/deactivated. The Python module for creating a **virtualenv** is called `venv`, and we can use it by loading the module and providing a path to where we would like to place the **virtualenv**. Let's create a **virtualenv** where we can install the package **PyYAML**:
+```shell
+$ sudo apt-get install python3-venv -y
+...
+$ mkdir ~/venv
+$ python3.7 -m venv ~/venv/test_yaml
+```
+Now we have a `virtualenv`, but we need to "**activate**" it by running a script that was created within the `virtualenv`'s bin directory.
+```shell
+$ source ~/venvs/pg/bin/activate
+(test_yaml) $ python --version
+Python 3.7.2
+```
+The *(test_yaml)* at the front of our prompt is to indicate to us which `virtualenv` we currently have active. While this `virtualenv` is active, the only python in our path is the *Python 3.7* that we used to generate it, and `pip` will install packages for that Python (so we don't need to use `pip3.7`). Let's install the **PyYAML** package:
+```shell
+(test_yaml) $ pip install PyYAML
+Collecting pyyaml
+...
+Installing collected packages: pyyaml
+Successfully installed pyyaml-3.11
+```
+To **deactivate** our `virtualenv`, we can use the `deactivate` executable that was put into our *$PATH*:
+```
+(test_yaml) $ deactivate
+$
+```
