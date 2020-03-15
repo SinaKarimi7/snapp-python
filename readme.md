@@ -2017,7 +2017,7 @@ One of the beautiful aspects of working in an object-oriented programming langua
 
 To test this out, we're going to create a simple text file with some names it in, and then read and modify it to see what we can learn.
 
-#### Opening a File
+##### Opening a File
 
 The first step to interacting with a file is to "open" it, and in Python we'll use the [open](https://docs.python.org/3/library/functions.html#open) function. This function takes two main arguments:
 
@@ -2045,7 +2045,7 @@ my_file = open('names.txt', 'w+')
 
 Now we have a new file object that we can write to.
 
-#### Writing to the File
+##### Writing to the File
 
 Before we can read from our *file* we need it to have some content. There are a few primary methods that we'll interact for with this depending on whether or not we want to work with **lines** or **individual characters**. The `write` method only writes the characters that we specify, where the `writelines` method takes a list of strings that should all be on their own *line*. Let's add some names to our file, each on its own *line*, using both methods:
 
@@ -2079,7 +2079,7 @@ This isn't quite what we expected. You would probably think that `writelines` wo
 
 Another thing that we didn't do is `close` the file. When we're finished working with a *file*, we should call the `close` method. It's not necessary when running this script because the *file* handle will be closed when the program terminates. But when we're interacting with files, from within a server for instance, the program won't terminate for a long time.
 
-#### Reading from a File
+##### Reading from a File
 
 Now that we have some content in the file, let's close it within the script, and then re-open it for reading.
 
@@ -2120,7 +2120,7 @@ Since we're reading the file in **'text'** mode, we'll receive a single string f
 
 If we were to call the `read` method again we would receive an empty string in response. The reason for this is that the *file* holds onto a **cursor** for the location that it's currently at in the *file* and when we read it returns everything after that **cursor** position and moves the **cursor** to the end. To reread the existing content, we'll need to use `seek` to move earlier in the *file*.
 
-#### The `with` Statement
+##### The `with` Statement
 
 Remembering to close a file that we open can be a little tedious and to get around this Python gives us the with statement. A with statement takes an object that has a close method and will call that method after the block has run.
 
@@ -2145,3 +2145,352 @@ with my_file:
 ```
 
 When we open the file to write, we're using the shorthand `as` expression to open the file within the `with` statement, and assigning it to the variable `my_file` within the block. This is a really handy tool if we don't need to use the file in any other way. An alternative would be to create the `my_file` variable manually, and then pass the variable into the `with` statement like we did when we were reading from the file.
+
+#### Environment variables
+
+A common way to configure our programs is to use environment variables.
+By importing the [os](https://docs.python.org/3/library/os.html) package, we're able to access a lot of miscellaneous operating system level attributes and functions, not the least of which is the [environ](https://docs.python.org/3/library/os.html#os.environ) object. This object behaves like a dictionary, so we can use the subscript operation to read from it.
+
+Let's create a simple script that will read a 'STAGE' environment variable and print out what stage we're currently running in:
+
+```python
+#~/learning_python/env_vars.py
+import os
+
+stage = os.environ["STAGE"].upper()
+
+output = f"We're running in {stage}"
+
+if stage.startswith("PROD"):
+    output = "DANGER!!! - " + output
+
+print(output)
+```
+
+We can set the environment variable when we run the script to test the differences:
+
+```shell
+$ STAGE=staging python3 env_vars.py
+We're running in STAGING
+$ STAGE=production python3 env_vars.py
+DANGER!!! - We're running in PRODUCTION
+```
+
+What happens if the 'STAGE' environment variable isn't set though?
+
+```shell
+$ python3 env_vars.py
+Traceback (most recent call last):
+  File "/home/cloud_user/learning_python/env_vars.py", line 5, in <module>
+    stage = os.environ["STAGE"].upper()
+  File "/usr/local/lib/python3.7/os.py", line 669, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'STAGE'
+```
+
+This potential **KeyError** is the biggest downfall of using [os.environ](https://docs.python.org/3/library/os.html#os.environ), and the reason that we will usually use [os.getenv](https://docs.python.org/3/library/os.html#os.getenv)
+
+##### Handling A Missing Environment Variable
+
+If the 'STAGE' environment variable isn't set then, we want to default to 'DEV', and we can do that by using the [os.getenv](https://docs.python.org/3/library/os.html#os.getenv) function:
+
+```python
+#~/learning_python/env_vars.py
+
+import os
+
+stage = os.getenv("STAGE", "dev").upper()
+
+output = f"We're running in {stage}"
+
+if stage.startswith("PROD"):
+    output = "DANGER!!! - " + output
+
+print(output)
+```
+
+Now if we run our script without a 'STAGE' we won't have an error:
+
+```shell
+$ python3.7 env_vars.py
+We're running in DEV
+```
+
+#### Error handling
+
+Not everything can go according to plan in our programs, but we should know when these scenarios arise and handle them appropriately.
+
+##### Handling Errors with try/except/else/finally
+
+When we know that there is a possibility that some our code might raise an error, we don't need to just accept it and let our program crash. We can actually handle these errors using the [try](https://docs.python.org/3/reference/compound_stmts.html#the-try-statement) statement. This is a compound statement kind of like the if statement where we will also need to use `except`, and have access to `else` and `finally`. Let's break down what these do by writing a small program that will potentially raise an error. We'll call this program handle_errors.py:
+
+```python
+#~/learning_python/handle_errors.py
+
+my_file = open('recipes.txt', 'x')
+my_file.write('Meatballs\n')
+my_file.close()
+```
+
+If we run this script once, then it will run successfully, but if we run it twice we'll see the following error:
+
+```shell
+$ python3 handle_errors.py
+$ python3 handle_errors.py
+Traceback (most recent call last):
+  File "handle_errors.py", line 1, in <module>
+    my_file = open('recipes.txt', 'x+')
+FileExistsError: [Errno 17] File exists: 'recipes.txt'
+```
+
+The error is a `FileExistsError` and it's being raised because we're opening the file for creation (using the `x` mode), but it already exists.
+
+To handle this, we need to place our code that could raise an error within a `try` statement and then `except` an error if it happens and do something else.
+
+```python
+#~/learning_python/handle_errors.py
+
+import sys
+
+file_name = 'recipes.txt'
+
+try:
+    my_file = open(file_name, 'x+')
+    my_file.write('Meatballs\n')
+    my_file.close()
+except:
+    print(f"The {file_name} file already exists")
+    sys.exit(1)
+```
+
+This is the simplest kind of `try`/`except` and this will catch any error that might be raised by `open(file_name, 'x+')`. If we run this file again, we should see our print out.
+
+```shell
+$ python3 handle_errors.py
+The recipes.txt file already exists
+```
+
+We could make this more specific and only except a very specific error, and even have multiple separate `except` blocks catching different kinds of errors. Let's introduce another potential error by passing in a bytes object to a file open in text mode and catch the errors separately:
+
+```python
+#~/learning_python/handle_errors.py
+
+import sys
+
+file_name = 'recipes.txt'
+
+try:
+    my_file = open(file_name, 'x+')
+    my_file.write(b'Meatballs\n')
+    my_file.close()
+except FileExistsError as err:
+    print(f"The {file_name} file already exists")
+    sys.exit(1)
+except:
+    print(f"Unable to write to the file")
+    sys.exit(1)
+```
+
+Let's run this with an existing file and without:
+
+```shell
+$ python3 handle_errors.py
+The recipes.txt file already exists
+$ rm recipes.txt
+$ python3 handle_errors.py
+Unable to write to the file
+$
+```
+
+###### The else and finally Statements
+
+Now we're able to handle errors, but the error handling workflow also facilitates a way for us to run code if there is no error that gets caught using `else`, and there's also a way to run some code after any error handling, or the `else` block, by using `finally`. Since we're using `sys.exit` we wouldn't be able to use `finally` as is, but let's make some modifications to see how both of these work.
+
+```python
+#~/learning_python/handle_errors.py
+
+import sys
+
+file_name = 'recipes.txt'
+
+try:
+    my_file = open(file_name, 'x+')
+    my_file.write('Meatballs\n')
+    my_file.close()
+except FileExistsError as err:
+    print(f"The {file_name} file already exists")
+except:
+    print(f"Unable to write to the {file_name} file")
+else:
+    print(f"Wrote to {file_name}")
+finally:
+    print("Execution complete")
+```
+
+Lastly, let's give this a run to see how it goes:
+
+```shell
+$ python3 handle_errors.py
+The recipes.txt file already exists
+Execution complete
+$ rm recipes.txt
+$ python3 handle_errors.py
+Wrote to recipes.txt
+Execution complete
+```
+
+#### Decorators and higher order function
+
+In addition to being an object-oriented programming language, Python lends itself to applying some ideas from functional programming, because functions are also objects.
+
+##### Higher Order Functions
+
+The distinction between referencing a function and calling a function allows us to pass functions into other functions, and return functions from functions. A function that receives a function argument and/or returns a function is what's known as a "higher-order function." And in Python, there's a special syntax that allows us to apply these functions to the functions that we're defining, in order to get additional functionality.
+
+This probably sounds a little complicated, and it can be, but it can be a very powerful tool once we understand what's going on behind the scenes.
+
+Let's create a new file called decorators.py, and create our first higher-order function that receives a function as an argument:
+
+```python
+#~/learning_python/decorators.py
+
+def inspect(func, *args, **kwargs):
+    print(f"Running {func.__name__}")
+    val = func(*args, **kwargs)
+    print(val)
+    return val
+
+def combine(a, b):
+    return a + b
+```
+
+Let's see how we would use this right now in the REPL:
+
+```python
+$ python3 -i decorators.py
+>>> inspect(combine, 1, 2)
+Running combine
+3
+3
+```
+
+This is an example of a higher order function that takes a function argument and uses it, but it's not that useful. A more common way to use higher-order functions in Python is by defining *decorators* which take in a function as an argument and then return a modified version of the function.
+
+##### Decorators
+
+To make `inspect` more useful, we're going to modify it so that we can decorate `combine` when we're defining it. To do this, we'll stop receiving the `*args` and `**kwargs` arguments, receiving just the function instead, and then we'll define a new function within the context of `inspect` before we return it. We'll use the decorator syntax to then wrap `combine`, with `inspect` above the line defining combine. Let's take a look at this in action:
+
+```python
+#~/learning_python/decorators.py
+
+def inspect(func):
+    def wrapped_func(*args, **kwargs):
+        print(f"Running {func.__name__}")
+        val = func(*args, **kwargs)
+        print(f"Result: {val}")
+        return val
+
+    return wrapped_func
+
+@inspect
+def combine(a, b):
+    return a + b
+```
+
+Notice that we're now using `*args` and `**kwargs` in `wrapped_func` and this will allow our returning function to handle any arguments before passing them to *func*.
+
+Now when we call `combine` it will have the added functionality of `inspect` because what we're really calling is the `wrapped_func` returned from `inspect`:
+
+```python
+$ python3 -i decorators.py
+>>> combine(1, b=2)
+Running combine
+Result: 3
+3
+```
+
+By using a decorator, we were able to add additional functionality to `combine` (or any function) without needing to modify the original, pure implementation.
+
+##### Commonly Used Decorators
+
+Now that we know how decorators work, it would be handy to know when to use them. Adding additional printing to functions is something that we can do, but that doesn't mean it's something we should do.
+
+Some of the most common decorators are [classmethod](https://docs.python.org/3/library/functions.html#classmethod), [staticmethod](https://docs.python.org/3/library/functions.html#staticmethod), and [property](https://docs.python.org/3/library/functions.html#property). All of these allow us to modify how method inside of our classes work.
+
+Let's create a new class within decorators.py that uses these decorators to understand what they do:
+
+```python
+#~/learning_python/decorators.py
+
+# inspect and combine omitted
+class User:
+    base_url = 'https://example.com/api'
+
+    def __init__(self, first_name, last_name):
+        self.first_name = first_name
+        self.last_name = last_name
+
+    @classmethod
+    def query(cls, query_string):
+        return cls.base_url + '/' + cls.__name__ + '?' + query_string
+
+    @staticmethod
+    def name():
+        return "User class"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+```
+
+This **class** does quite a lot, so let's go through it. First, we're creating a class level variable in `base_url`. This exists on the **class** itself. Next, we're defining our initializer as we've done before. The `query` method is a function that we'd like to exist on the `User` **class** itself, not an *instance* of the class. This is what's known as a "class method." To achieve this, we use the `@classmethod` decorator, and the `User` **class** itself is passed in as the first argument.
+
+The name static method is similar, but a `@staticmethod` doesn't need an implicit argument. It's really just a function that is attached to the `User` **class**, but won't use any of the class's state. Finally, we define the `full_name` method as a property by using the `@property` decorator. By doing this, when we reference `user_instance.full_name` it won't return the function to us, but will instead return the result of the function.
+
+Let's see our class in action:
+
+```python
+$ python3 -i decorators.py
+>>> User.name
+<function User.name at 0x7fcd82686f28>
+>>> User.name()
+'Kevin Bacon'
+>>> User.query('name=test')
+'https://example.com/api?name=test'
+>>> user = User('Keith', 'Thompson')
+>>> user.base_url
+'https://example.com/api'
+>>> user.full_name
+'Keith Thompson'
+```
+
+It's worth noting that the `property` decorator is actually a **class** and not a function, and can be used in more complicated ways. I encourage you to read the documentation for it.
+
+##### Decorators with parameters
+
+Sometime our decorator need some data to do its magic. Let's write a decorator that log execution of a function to a file.
+
+```python
+#learning_python/decorators_with_args.py
+
+def log_it(log_file):
+    def decorator(func):
+        def wrapped_func(*args, **kwargs):
+            try:
+                result = func(*args, **kwargs)
+                with open(log_file, 'a'):
+                    log_file.write(f'Function {func.__name__} executed successfully\n')
+                    log_file.write('--------------------------------\n')
+            except Exception as err:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                with open(log_file, 'a'):
+                    log_file(f'Exception in executing {func.__name__}: {err!s}\n')
+                    log_file.writelines(traceback.format_tb(exc_traceback))
+                    log_file.write('--------------------------------\n')
+        return wrapped_func
+    return decorator
+```
+
+In this new decorator we expect a parameter that is name of the log file that we use to write
+
+Here we use [sys.exc_info](https://docs.python.org/3/library/sys.html#sys.exc_info) to extract detailed information of the exception and we used [traceback](https://docs.python.org/3/library/traceback.html) module to access traceback information of the exception.
