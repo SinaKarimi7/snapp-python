@@ -2494,3 +2494,284 @@ def log_it(log_file):
 In this new decorator we expect a parameter that is name of the log file that we use to write
 
 Here we use [sys.exc_info](https://docs.python.org/3/library/sys.html#sys.exc_info) to extract detailed information of the exception and we used [traceback](https://docs.python.org/3/library/traceback.html) module to access traceback information of the exception.
+
+##### Reading ini files
+
+`ini` format is a very simple and common format for configuration files. In order to work with this format in python we may use `configparser` module.
+
+```python
+>>> import configparser
+>>> config = configparser.Config()
+>>> config.sections()
+[]
+>>> config.read('example.ini')
+['example.ini']
+>>> config.sections()
+['database']
+>>> config['database']['filename']
+'test.db'
+>>> for key in config['database']:
+...   print(f' {key}: {config["database"][key]}')
+driver: sqlite3
+filename: test.db
+create_schema: yes
+>>> config.getboolean('database', 'create_schema')
+True
+>>> config.getboolean('database', 'create_tables', fallback=True)
+True
+```
+
+##### Working with sqlite databases
+
+SQLite is a [small](https://www.sqlite.org/footprint.html), [fast](https://www.sqlite.org/fasterthanfs.html), [self-contained](https://www.sqlite.org/selfcontained.html), [high-reliability](https://www.sqlite.org/hirely.html), [full-featured](https://www.sqlite.org/fullsql.html), SQL database engine. SQLite is the [most used](https://www.sqlite.org/mostdeployed.html) database engine in the world
+
+In order to connect to databases, we need an special library called database connector. This library knows how best connect to an specific database like MySQL, MSSQL, Oracle and ...
+
+In python there is an standard interface for this connectors called **Python DBI API 2.0**.
+Here we use sqlite database format, because it does not need any server. But you can use same API to connect to other databases.
+
+###### Create a connection to database
+
+Before anything we need to create a connection to database passing our connection information like address of server and our credential.
+In sqlite we have this:
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+```
+
+In sqlite, there is an special filename that we can use to create database in memory instead of file system. This is usefull when we want to work with SQL statements to search in our in memory data.
+
+```python
+import sqlite3
+
+con = sqlite3.connect(':memory:')
+```
+
+###### Cursor
+
+To execute SQL statements in Python, you need a cursor object. You can create it using the `cursor()` method of the **connection** object.
+
+```python
+import sqlite3
+
+con = sqlite3.connect(':memory:')
+cur = con.cursor()
+```
+
+###### Create a Table
+
+To create a table in SQLite3, you can use the *Create Table* query in the `execute()` method. Consider the following steps:
+
+- The connection object is created
+- Cursor object is created using the connection object
+- Using cursor object, execute method is called with create table query as the parameter
+
+Let’s create employees with the following attributes:
+
+> employees (id, name, salary, department, position, hireDate)
+
+The code will be like this:
+
+```python
+import sqlite3
+
+from sqlite3 import Error
+
+def sql_connection():
+    try:
+        con = sqlite3.connect('mydatabase.db')
+        return con
+    except Error:
+        print(Error)
+
+def sql_table(con):
+    cursorObj = con.cursor()
+
+    cursorObj.execute("CREATE TABLE employees(id integer PRIMARY KEY, name text, salary real, department text, position text, hireDate text)")
+
+    con.commit()
+
+con = sql_connection()
+
+sql_table(con)
+```
+
+In the above code, we have defined two methods, the first one establishes a connection and the second method creates a cursor object to execute the create table statement.
+
+> [!IMPORTANT]
+> The `commit()` method saves all the changes we make. In the end, both methods are called.
+
+###### Insert data into table
+
+To insert data in a table, we use the *INSERT INTO* statement. Consider the following line of code:
+
+```python
+cursorObj.execute("INSERT INTO employees VALUES(1, 'John', 700, 'HR', 'Manager', '2017-01-04')")
+
+con.commit()
+```
+
+###### Parameterized queries
+
+Using parameter value inside a query has 2 draw backs:
+
+- Lower performance
+  - Database engine should compile our arguments back to their values
+  - If we execute a single query multiple times, then database engine see each query as a new one and will have to parse them again
+- Security risks:
+  - Since SQL is a text based protocol that we use to communicate with our database engnire, it is susceptible to parameter injection.
+
+But fortunately there is another way to write our queries:
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_insert(con, *entities):
+    cursorObj = con.cursor()
+
+    cursorObj.execute('INSERT INTO employees(id, name, salary, department, position, hireDate) VALUES(?, ?, ?, ?, ?, ?)', entities)
+
+    con.commit()
+
+sql_insert(con, 2, 'Andrew', 800, 'IT', 'Tech', '2018-02-06')
+```
+
+###### Updating tables
+
+To update the table simply create a connection, then create a cursor object using the connection and finally use the *UPDATE* statement in the `execute()` method.
+
+Suppose that we want to update the name of the employee whose id equals 2. For updating, we will use the *UPDATE* statement and for the employee whose id equals 2. We will use the *WHERE* clause as a condition to select this employee.
+
+Consider the following code:
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_update(con, id, name):
+    cursorObj = con.cursor()
+
+    cursorObj.execute('UPDATE employees SET name ? where id = ?', (name, id))
+
+    con.commit()
+
+sql_update(con, 2, 'Ali')
+```
+
+###### Select statement
+
+The *SELECT* statement is used to select data from a particular table. If you want to select all the columns of the data from a table, you can use the `asterisk (*)`. The syntax for this will be as follows:
+
+```sql
+select * from table_name
+```
+
+For example, select all the columns of the employees’ table, run the following code:
+
+```python
+cursorObj.execute('SELECT * FROM employees ')
+```
+
+If you want to select a few columns from a table then specify the columns like the following:
+
+```sql
+select column1, column2 from tables_name
+```
+
+For example,
+
+```python
+cursorObj.execute('SELECT id, name FROM employees')
+```
+
+The *SELECT* statement selects the required data from the database table and if you want to `fetch` the selected data, the `fetchall()` method of the *cursor* object is used. This is demonstrated in the next section.
+
+###### Fetch all data
+
+To fetch the data from a database we will execute the *SELECT* statement and then will use the `fetchall()` method of the *cursor* object to store the values into a variable. After that, we will loop through the variable and print all values.
+
+The code will be like this:
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_fetch(con):
+    cursorObj = con.cursor()
+
+    cursorObj.execute('SELECT * FROM employees')
+    for row in cursorObj.fetchall():
+        print(row)
+
+sql_fetch(con)
+```
+
+If you want to `fetch` specific data from the database, you can use the *WHERE* clause. For example, we want to `fetch` the ids and names of those employees whose _salary_ is greater than 800.
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_fetch(con, salary):
+    cursorObj = con.cursor()
+
+    cursorObj.execute('SELECT id, name FROM employees WHERE salary > ?', (salary,))
+    for row in cursorObj.fetchall():
+        print(row)
+
+sql_fetch(con, 800.0)
+```
+
+In the above *SELECT* statement, instead of using the `asterisk (*)`, we specified the id and name attributes.
+
+###### Delete data from table
+
+In order to delete data from a table we use *DELETE* statement. just don't forget to use *WHERE* clause, otherwise you will delete all data from your table!.
+
+> [!IMPORTANT]
+> *DELETE* always come with a *WHERE* clause
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_delete(con, salary):
+    cursorObj = con.cursor()
+
+    cursorObj.execute('DELETE FROM employees WHERE salary > ?', (salary,))
+
+sql_delete(con, 200.0)
+```
+
+###### rowcount
+
+The `rowcount` is used to return the number of rows that are affected or selected by the latest executed SQL query.
+
+When we use `rowcount` with the *SELECT* statement, -1 will be returned as how many rows are selected is unknown until they are all fetched. Consider the example below:
+
+```python
+print(cursorObj.execute('SELECT * FROM employees').rowcount)
+```
+
+But if we use `rowcount` with a statement like *DELETE* we can find how many rows actually deleted from the database.
+
+```python
+import sqlite3
+
+con = sqlite3.connect('mydatabase.db')
+
+def sql_delete(con, salary):
+    cursorObj = con.cursor()
+
+    return cursorObj.execute('DELETE FROM employees WHERE salary > ?', (salary,)).rowcount
+
+print(f'{sql_delete(con, 200.0)} numer of rows deleted from employees')
+```
