@@ -2495,7 +2495,7 @@ In this new decorator we expect a parameter that is name of the log file that we
 
 Here we use [sys.exc_info](https://docs.python.org/3/library/sys.html#sys.exc_info) to extract detailed information of the exception and we used [traceback](https://docs.python.org/3/library/traceback.html) module to access traceback information of the exception.
 
-##### Reading ini files
+#### Reading ini files
 
 `ini` format is a very simple and common format for configuration files. In order to work with this format in python we may use `configparser` module.
 
@@ -2521,7 +2521,7 @@ True
 True
 ```
 
-##### Working with sqlite databases
+#### Working with sqlite databases
 
 SQLite is a [small](https://www.sqlite.org/footprint.html), [fast](https://www.sqlite.org/fasterthanfs.html), [self-contained](https://www.sqlite.org/selfcontained.html), [high-reliability](https://www.sqlite.org/hirely.html), [full-featured](https://www.sqlite.org/fullsql.html), SQL database engine. SQLite is the [most used](https://www.sqlite.org/mostdeployed.html) database engine in the world
 
@@ -2530,7 +2530,7 @@ In order to connect to databases, we need an special library called database con
 In python there is an standard interface for this connectors called **Python DBI API 2.0**.
 Here we use sqlite database format, because it does not need any server. But you can use same API to connect to other databases.
 
-###### Create a connection to database
+##### Create a connection to database
 
 Before anything we need to create a connection to database passing our connection information like address of server and our credential.
 In sqlite we have this:
@@ -2549,7 +2549,7 @@ import sqlite3
 con = sqlite3.connect(':memory:')
 ```
 
-###### Cursor
+##### Cursor
 
 To execute SQL statements in Python, you need a cursor object. You can create it using the `cursor()` method of the **connection** object.
 
@@ -2560,7 +2560,7 @@ con = sqlite3.connect(':memory:')
 cur = con.cursor()
 ```
 
-###### Create a Table
+##### Create a Table
 
 To create a table in SQLite3, you can use the *Create Table* query in the `execute()` method. Consider the following steps:
 
@@ -2603,7 +2603,7 @@ In the above code, we have defined two methods, the first one establishes a conn
 > [!IMPORTANT]
 > The `commit()` method saves all the changes we make. In the end, both methods are called.
 
-###### Insert data into table
+##### Insert data into table
 
 To insert data in a table, we use the *INSERT INTO* statement. Consider the following line of code:
 
@@ -2613,7 +2613,7 @@ cursorObj.execute("INSERT INTO employees VALUES(1, 'John', 700, 'HR', 'Manager',
 con.commit()
 ```
 
-###### Parameterized queries
+##### Parameterized queries
 
 Using parameter value inside a query has 2 draw backs:
 
@@ -2640,7 +2640,7 @@ def sql_insert(con, *entities):
 sql_insert(con, 2, 'Andrew', 800, 'IT', 'Tech', '2018-02-06')
 ```
 
-###### Updating tables
+##### Updating tables
 
 To update the table simply create a connection, then create a cursor object using the connection and finally use the *UPDATE* statement in the `execute()` method.
 
@@ -2663,7 +2663,7 @@ def sql_update(con, id, name):
 sql_update(con, 2, 'Ali')
 ```
 
-###### Select statement
+##### Select statement
 
 The *SELECT* statement is used to select data from a particular table. If you want to select all the columns of the data from a table, you can use the `asterisk (*)`. The syntax for this will be as follows:
 
@@ -2691,7 +2691,7 @@ cursorObj.execute('SELECT id, name FROM employees')
 
 The *SELECT* statement selects the required data from the database table and if you want to `fetch` the selected data, the `fetchall()` method of the *cursor* object is used. This is demonstrated in the next section.
 
-###### Fetch all data
+##### Fetch all data
 
 To fetch the data from a database we will execute the *SELECT* statement and then will use the `fetchall()` method of the *cursor* object to store the values into a variable. After that, we will loop through the variable and print all values.
 
@@ -2731,7 +2731,7 @@ sql_fetch(con, 800.0)
 
 In the above *SELECT* statement, instead of using the `asterisk (*)`, we specified the id and name attributes.
 
-###### Delete data from table
+##### Delete data from table
 
 In order to delete data from a table we use *DELETE* statement. just don't forget to use *WHERE* clause, otherwise you will delete all data from your table!.
 
@@ -2751,7 +2751,7 @@ def sql_delete(con, salary):
 sql_delete(con, 200.0)
 ```
 
-###### rowcount
+##### rowcount
 
 The `rowcount` is used to return the number of rows that are affected or selected by the latest executed SQL query.
 
@@ -2774,4 +2774,416 @@ def sql_delete(con, salary):
     return cursorObj.execute('DELETE FROM employees WHERE salary > ?', (salary,)).rowcount
 
 print(f'{sql_delete(con, 200.0)} numer of rows deleted from employees')
+```
+
+#### Executing external applications
+
+In order to execute external processes and interact with them, we use [subprocess](https://docs.python.org/3/library/subprocess.html) standard module. We mainly use [subprocess.Popen](https://docs.python.org/3/library/subprocess.html#subprocess.Popen) function to capture standard output of the process.
+
+In order to execute an external application we use [subprocess.Popen](https://docs.python.org/3/library/subprocess.html#subprocess.Popen). This function give us the ability to capture the output of executed application and enable us to capture its result.
+
+```python
+import sys
+import subprocess
+
+try:
+    proc = subprocess.Popen(['ls', '-la'], stdout=subprocess.PIPE)
+except OSError as err:
+    print(f"Error in executing the command: {err}")
+    sys.exit(1)
+
+with open('local_file.txt', 'w+b') as f:
+    f.write(proc.stdout.read())
+```
+
+Remember since in `subprocess.Popen` call, we used a PIPE to capture stdout of the application and that pipe opened in binary mode, result of the `proc.stdout.read()` is of type `bytes` instead of the type `str` that we so used to. So here we have 2 choices:
+
+- Use `bytes.decode(encoding)` to convert the `bytes` buffer to type `str` and then write it to a file that opened in text mode
+- Or open the file in binary mode and write that said `bytes` buffer to that binary file.
+
+We used the latter, because it is much more efficient and require less coding.
+
+## Writing web applications using python and flask
+
+### Basics of web development
+
+#### Lifecycle of HTTP requests
+
+![Request Lifecycle](./resources/request-lifecycle.png)
+A web application is a long running program that receive requests from clients, process them and return responses to those clients.
+
+A single request will be processed like this:
+
+- **Request**: A client make a request to the web application. Each request contains many information but mose important of them are:
+
+  - **HTTP verb**: An HTTP verb indicate what we should do with the request, its like the method that should executed by the web application. And it is usually   one of the following methods:
+    - **GET** - This requests a representation of a specific resource. These requests should only receive data, not cause changes.
+    - **HEAD** - It's like a **GET** request, but only receives the headers (no response body).
+    - **POST** - These submit data to the application, and usually cause a change in the application's state.
+    - **PUT** - This replaces the current representation of the target resource.
+    - **DELETE** - Just like it sounds, it deletes the specified resource.
+    - **PATCH** - These partially modify a resource.
+  - **URL**
+  
+    Address of the resource that method should executed on it. We may look at this like object instances.
+  
+  - **Headers**: Extra information that may modify how we execute the method and provide extra information to the web application. We may look at this like   arguments for the method.
+  
+  - **Body**: Optionally request may contains a body that contains extra data about the resource. More on this later.
+
+- **Routing** The web application receive the request and based on its information (VERB, URL, headers) route it to the proper handler in the code.
+
+- **Response** The handler in the web application code process the request and generate a response for it and return that response to the client. This response also include *headers* and may also have a *body*
+
+### MVC
+
+For our application, we're going to be structuring our code using the **MVC** pattern: *Model*, *View*, *Controller*. At its core, **MVC** architecture revolves around 3 concepts:
+
+- **Model** - Holds onto the data and business logic:
+Ideally, the model holds onto "the brains" of our application.
+- **View** - The representation of our business logic:
+For our application, the view portion will be the HTML templates that we render and return.
+- **Controller** - The input/output interface for the application:
+The controller receives requests and utilizes the model and view to display the proper response. In **Flask**, there are a few different ways to create a "controller," but in its simplest form the controller will actually be the **Flask** application itself.
+Unfortunately things become a little confusing with **Flask**, since the functions that receive the requests and are supposed to act as the *controller* are called *views*.
+
+A common problem with **MVC** architecture is that people put too much logic into the controller and view portions, but we'll do our best to keep the important contents in our *Model*.
+
+**Flask** is a micro-framework that doesn't force us to use an **MVC** architecture, and it really doesn't provide us with any structure for doing so, but we can achieve this distinction on our own by building our own distinct modules.
+
+### [Flask](https://flask.palletsprojects.com/en/1.1.x/)
+
+Flask is a web development framework for python, as I said earlier it is a micro framework that let us write very small codes. In fact you may write a whole web server in a single file.
+
+### Our web application
+
+We want to write a web application that keep notes, it will support [markdown](https://daringfireball.net/projects/markdown/syntax) so we may write powerfull notes and it allow us to work with those notes and view them as HTML.
+
+### Setup requirements
+
+First of all we create a folder for our project
+
+```shell
+mkdir notes
+cd notes
+```
+
+Now we initialize this folder as a git repository
+
+```shell
+git init
+```
+
+And then we create a *.gitignore* for this project. This special file tell the git repository what files should be excluded from git. by default we will download a default .gitignore file for python from the internet.
+
+```shell
+curl -o .gitignore https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
+```
+
+Next we create a *virtualenv* for our project, so we can manage our dependencies and python version
+
+```shell
+python3 -m venv ./venv
+source ./venv/bin/activate
+```
+
+And now we install **Flask** in this *virtualenv*
+
+```shell
+pip install flask
+```
+
+Now we will create 2 special directories that have special meaning for **Flask**
+
+```shell
+mkdir templates static
+touch {templates,static}/.gitkeep
+```
+
+And finally we commit our job so far as initial commit to the git repository
+
+```shell
+git add --all .
+git commit -m "Initial commit"
+```
+
+### Create the application and its databases
+
+For start we create a python file named `__init__` this is standard file for creating a package. It will be used by python package loader to initialize our package.
+You may put some codes in this file, and in this case whenever you import your package(named `notes`) you can access everything that defined in this file.
+
+```python
+# __init__.py
+import os
+from flask import Flask
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', default='dev')
+    )
+
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
+    return app
+```
+
+Now to run our application we can use:
+
+```shell
+export FLASK_ENV=development
+export FLASK_APP='.'
+flask run --host=0.0.0.0 --port=8000
+```
+
+No if we access our application on port 8000 we get an error page that complain about the we application couldn't find the requested URL and the reason is we does not configured **Flask** to know what it should do in case that it received a request for a resource.
+
+For now we stop our server using `Ctrl+C` because we want to add some functionality to it.
+
+As you remeber it, we add our configuration from a python file named `config.py`. So we will create it.
+
+```python
+# config.py
+import os
+
+db_file = os.environ.get('DB_FILE', default='notes.db')
+
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_DATABASE_URI = f"sqlite:///{db_file}"
+```
+
+Now we create a `.env` file to hold our environment variables that configure our application.
+
+```shell
+export DB_FILE='notes-db.sqlite'
+export FLASK_ENV='development'
+export FLASK_APP='.'
+```
+
+Now we can run our application using:
+
+```shell
+source .env
+flask run --host=0.0.0.0 --port=8000
+```
+
+As you can see in response of running server we may use the package `python-dotenv` to automatically load `.env` file instead of loading it everytime we want to run our application. So let's go and do that
+
+```shell
+pip install python-dotenv
+flask run --host=0.0.0.0 --port=8000
+```
+
+No we keep our flask application running and modify our code. The beautiful thing about **Flask** is when we run it in *development* mode it will automatically detect changes and reload our web application for us when we change something.
+
+Don't forget to commit your changes to git repository, so you can change your files without the fear of corrupting something.
+
+```shell
+git add --all .
+git commit -m "Flask setup completed"
+```
+
+### Setup models
+
+Now we want to setup the brain of the application: Model.
+
+First we must install a few packages:
+
+```shell
+pip install Flask-SQLAlchemy Flask-Migrate
+```
+
+And now we create a new file named `model.py` that contains definition of our models.
+
+```python
+# model.py
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+
+
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    body = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+```
+
+Now we have our models, but we want them to be related. We want to know who create the `Note` and possibly we want to know list of all `Note`s that created by a user. So we change our model like this:
+
+```python
+#model.py
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+    notes = db.relationship('Note', backref='author', lazy=True)
+
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    body = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+```
+
+In order to define the shape of our data, we don't need to connect to the database. But after we defined our models we want to connect the `db` to our application and use connection string from our configuration. So we go back to `__init__.py` and modify it to configure `db`.
+
+```python
+# __init__.py
+import os
+from flask import Flask
+from flask_migrate import Migrate
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', default='dev')
+    )
+
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
+    from .models import db
+    db.init_app(app)
+
+    # setup migrations
+    migrate = Migrate(app, db)
+
+    return app
+```
+
+Now that we have defined our models and linked it to our application we must initialize our db
+
+```shell
+flask db init
+```
+
+This will create migration scripts for us, now we must execute those scripts to upgrade our database with our new models:
+
+```shell
+flask db upgrade
+```
+
+Again remember to commit your work
+
+```shell
+git add --all .
+git commit -m "Database initialized"
+```
+
+### Building User Registration
+
+In order to setup our user registration we go to our beloved `__init__.py` and modify it to add registration ability to the users. In order to do that we want to route all requests to `/sign_up` to be processed by registration handler.
+
+```python
+# __init__.py
+import os
+from flask import Flask, render_template    # This is our first view function
+from flask_migrate import Migrate
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', default='dev')
+    )
+
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
+    from .models import db
+    db.init_app(app)
+
+    # setup migrations
+    migrate = Migrate(app, db)
+
+    # routes
+    @app.route('/sign_up')
+    def sign_up():
+        return render_template('sign_up.html')
+
+    return app
+```
+
+Now if you go to your browser and navigate to `http://localhost:8000/sign_up` you will get an error complaining about a missing template. That's because we does not have a template in `templates` folder that named `sign_up.html`.
+
+Go ahead and copy content of `resources/note_templates` to `templates` and contents of `resources/note_static` to `static` folder of your application. Now you can referesh the browser to see the correctly rendered page.
+
+By navigating to `http://localhost:8000/sign_up`, you issue a **GET** request. But when you press then `Sign Up` button, the form will issue a **POST** request. So let's change the code and add the ability to handle **POST** request to the `sign_up` method.
+
+```python
+# __init__.py
+import os
+from flask import Flask, render_template, redirect, url_for, request, flash
+from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', default='dev')
+    )
+
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
+    from .models import db, User
+    db.init_app(app)
+
+    # setup migrations
+    migrate = Migrate(app, db)
+
+    # routes
+    @app.route('/sign_up', methods=('GET', 'POST'))
+    def sign_up():
+        if request.method == 'POST':
+            username = request.form['username']
+            password = request.form['password']
+            error = None
+
+            if not username:
+                error = 'Username is required.'
+            elif not password:
+                error = 'Password is required.'
+            elif User.query.filter_by(username=username).first():
+                error = 'Username is already taken.'
+
+            if error is None:
+                user = User(username=username, password=generate_password_hash(password))
+                db.session.add(user)
+                db.session.commit()
+                flash("Successfully signed up! Please log in.", 'success')
+                return redirect(url_for('log_in'))
+
+            flash(error, 'error')
+
+        return render_template('sign_up.html')
+
+    @app.route('/log_in')
+    def log_in():
+        return 'OK'
+
+    return app
 ```
