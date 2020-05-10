@@ -3133,7 +3133,9 @@ By navigating to `http://localhost:8000/sign_up`, you issue a **GET** request. B
 
 ```python
 # __init__.py
+
 import os
+
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash
@@ -3187,3 +3189,513 @@ def create_app(test_config=None):
 
     return app
 ```
+
+### Building User Authentication
+
+Until now we enabled the user to create a new user in our application, but now we need our application to recognize that user and provide a way for authenticated user to loging to the system.
+
+In order to do that we must query data from the database, make sure that user information is valid and then save authentication information in a cookie, so on next requests we know that user is already authenticated.
+
+```python
+# __init__.py
+
+import os
+
+from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
+
+def create_app(test_config=None):
+    ## ignored previous code
+
+    @app.route('/log_in')
+    def log_in():
+        if request.method == 'POST':
+            username = request.form['username']
+            password = request.form['password']
+            error = None
+
+            user = User.query.filter_by(username=username).first()
+            if user is None or not check_password_hash(user.password, password):
+                error = 'Invalid username and/or password'
+
+            if error is None:
+                session.clear()
+                session['user_id'] = user.id
+                return redirect(url_for('index'))
+
+            flash(error, 'error')
+
+        return render_template('log_in.html')
+
+    @app.route('/')
+    def index():
+        return 'OK'
+```
+
+As you can see our `log_in` function have much similarity to the `sign_up` method. Actually this is base of all web development. In every handler you receive the request.
+
+- Extract input parameters from it
+- Validate user input
+- Do actual task(modify state of the server)
+- Return result or redirect user to the location that he/she can retrive the result.
+
+> [!IMPORTANT]
+> Just remember you must go back to page templates and update all the locations that contains *href="#"* to point to actual location. The reason that we write *href="#"* in the first place is that the handler must already exists or `url_for` will fail. So until we actually implement the handler for a url we can't use `url_for` to refer to that url.
+
+### Implementing logout
+
+Fortunately this is the easiest step till now. we just have to clear session information and remove the cookie.
+
+```python
+# __init__.py
+
+import os
+
+from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
+
+def create_app(test_config=None):
+    ## ignored previous code
+
+    @app.route('/log_in')
+    def log_in():
+        if request.method == 'POST':
+            username = request.form['username']
+            password = request.form['password']
+            error = None
+
+            user = User.query.filter_by(username=username).first()
+            if user is None or not check_password_hash(user.password, password):
+                error = 'Invalid username and/or password'
+
+            if error is None:
+                session.clear()
+                session['user_id'] = user.id
+                return redirect(url_for('index'))
+
+            flash(error, 'error')
+
+        return render_template('log_in.html')
+
+    @app.route('/log_out', methods=('GET', 'DELETE'))
+    def log_out():
+        session.clear()
+        flash('Successfully logged out', 'success')
+        return redirect(url_for('log_in'))
+
+    @app.route('/')
+    def index():
+        return 'OK'
+```
+
+> [!IMPORTANT]
+> We implemented 2 methods for `log_out`, this is because we are deleting user session so the **DELETE** seems like correct method but unfortunately this does not work for the browser. So we also implemented the **GET** method for the browser.
+
+Adding sign up and authentication to our application has forced us to learn a lot about how Flask views, templates, and sessions work. From here, we're ready to add the main feature to our application: note taking!
+
+### Implementing Notes CRUD - Creating and Reading
+
+One of the most common things to implement in any web application is the **CRUD** functionality around a specific type of data: *Create*, *Read*, *Update*, and *Delete*. In this lesson, we'll implement the C and R portions of CRUD for our Note class.
+
+Every note is bound to a user, so before we create our first note, we need to add some code to our application to make working with a logged in user nicer:
+
+- We want to automatically load and populate user information into a context that will be available to the handlers. In *flask* this context is named `g`. I know that this name is not really a good name but it means global context. so we want to populate `g.user` if there is user information in the `session`.
+- We want to create a decorator that can wrap views that require a logged in `User` to work.
+
+For the first one, we'll use a different decorator on `app` to state that the specified function should run before the request is processed by a view, using `app.before_request`. To handle the second, we'll use `functools.wraps` to create a decorator that redirects to `/log_in` if g.user is not set. Let's implement these now:
+
+```python
+# __init__.py
+
+import os
+import functools
+
+from flask import Flask, render_template, redirect, url_for, request, flash, session, g
+from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
+
+def create_app(test_config=None):
+    # previous code ommitted
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+    # this will be used as a decorator on a view that required a logged in user
+    def require_login(view):
+        @functools.wraps(view)
+        def wrapped_view(**kwargs):
+            if not g.user:
+                return redirect(url_for('log_in'))
+            return view(**kwargs)
+        return wrapped_view
+
+    # this will be executed before handling every request, so the code that come after
+    # it can easily access user information through g.user
+    @app.before_request
+    def load_user():
+        user_id = session.get('user_id')
+        if user_id:
+            g.user = User.query.get(user_id)
+        else:
+            g.user = None
+
+    # Remaining code omitted
+```
+
+`require_login` function does a few things:
+
+- Takes in a view to decorate
+- Defines the `wrapped_view` that decorates the *view*, redirecting if there is no user and calling the original *view* if there is
+
+The used of `functools.wraps` allows the `wrapped_view` that we return to copy some of the contents that are implicitly designated for a function, such as `__name__`. So the `wrapped_view.__name__ == view.__name__` would be true.
+
+The `load_user` function doesn't do anything but assign `g.user` if there is a `user_id` in the `session`. Without adding any more code, we can actually see changes to our navigation now.
+
+#### Creating a Note
+
+We need to create a few different routes for our Notes CRUD:
+
+- `/notes` The notes index that will list out the currently logged in `User`'s notes
+- `/notes/new` The note creation page that will have a form for creating a new note
+- `/notes/<note_id>/delete` This route will be used to delete a note by handling using either a **GET** or **DELETE** method. If we receive that request, then we'll delete the note with the given *note_id*. The most accurate HTTP method to use is **DELETE**, but browsers mostly utilize **GET** and **POST** so we'll support **GET** to avoid writing *JavaScript* code to execute our request.
+- `/notes/<note_id>/edit` The note edit page to allow us to make modifications to an existing note
+
+```python
+# __init__.py
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Initial setup omitted
+
+    from .models import db, User, Note
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+    # Earlier views omitted
+
+    @app.route('/notes')
+    @require_login
+    def note_index():
+        return 'Note Index'
+
+    @app.route('/notes/new', methods=('GET', 'POST'))
+    @require_login
+    def note_create():
+        if request.method == 'POST':
+            title = request.form['title']
+            body = request.form['body']
+            error = None
+
+            if not title:
+                error = 'Title is required.'
+
+            if not error:
+                note = Note(author=g.user, title=title, body=body)
+                db.session.add(note)
+                db.session.commit()
+                flash(f"Successfully created note: '{title}'", 'success')
+                return redirect(url_for('note_index'))
+
+            flash(error, 'error')
+
+        return render_template('note_create.html')
+
+    return app
+```
+
+When we're dealing with the 'C' in CRUD it usually goes the same way. We check if the request is a **POST** request, validate the information, create the object, and then redirect *OR* render the original page with errors to display.
+
+Looking at our *note_create.html* template, the only new thing is that we're now setting the value for our inputs to match the corresponding item in *request.form*. If there is an error, we'll re-render the page with the content that the user created.
+
+Now that we have a note, we can implement the 'R' portion of CRUD by implementing the note index page and the note show page.
+
+#### Parsing Markdown
+
+Parsing markdown and displaying it is something that's outside the scope of this course, but this is a great situation where we can rely on the open source community and pull in another dependency. We're going to use on the mistune markdown parsing library, so let's install that now:
+
+```shell
+(notes) $ pip install mistune
+...
+```
+
+There are a few ways that we can use this, but in general, we need to use a **mistune.Markdown** object or the **mistune.markdown** function to take the text that we store in `Note.body`. We'll add a new calculated property to our Note class called body_html. Here's what it looks like:
+
+```python
+# models.py
+
+from flask_sqlalchemy import SQLAlchemy
+from mistune import markdown
+
+# db and User omitted
+
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    body = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    @property
+    def body_html(self):
+        return markdown(self.body)
+```
+
+Now we're able to use `note.body_html` in our templates to render out the *HTML*.
+
+#### Rendering Notes
+
+Now that we can convert the `Note.body` into *HTML*, let's implement the *note_index* view so that we can see our notes from the UI.
+
+```python
+# __init__.py:
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Earlier code omitted
+
+    @app.route('/notes')
+    @require_login
+    def note_index():
+        return render_template('note_index.html', notes=g.user.notes)
+
+    # Remaining views omitted
+
+    return app
+```
+
+Because we're using `require_login`, we know that we'll never make it into the `note_index` view if there is not a `g.user` object. From there, we're able to simply pass the currently logged in user's notes to the template as the variable "notes", by using the corresponding keyword argument in the template we're rendering.
+
+```html
+<!--templates/note_index.html-->
+
+{% extends 'base.html' %}
+
+{% block content %}
+  {% if not notes %}
+    <div class="content">
+      <p>You haven't created any notes! <a href="{{ url_for('note_create') }}">Create your first note.</a>
+    </div>
+  {% endif %}
+
+  {% for note in notes %}
+    <article class="message">
+      <div class="message-header">
+        <p>{{ note.title }}</p>
+        <div>
+          <a class="button is-primary is-small has-text-weight-bold" href="#">
+            Edit Note
+          </a>
+          <a class="button is-danger is-small has-text-weight-bold" href="#">
+            Delete Note
+          </a>
+        </div>
+      </div>
+      <div class="message-body content">
+        {{ note.body_html|safe }}
+      </div>
+    </article>
+  {% endfor %}
+{% endblock %}
+```
+
+For the most part, we've seen everything in this template already. The exception being `|safe` when we're rendering out the `note.body_html`. This is a **Jinja** filter, and the safe filter will tell **Jinja** that it should not *escape* the value coming from **Python**. Instead, we've already declared it to be *safe* to render.
+
+Now if we log in and head to */notes*, we can see the notes that we've created. And if we used fenced code blocks, we'll even see them rendered with syntax highlighting, thanks to some *JavaScript* packaged with the *static* assets.
+
+### Implementing Notes CRUD - Updating and Deleting
+
+Editing and updating a note isn't much different from creating a note, but it does give us the ability to use **dynamic** routes that contain variables. We'll almost use the exact same template. Let's create our *note_update* view now:
+
+```python
+# __init__.py:
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Earlier code omitted
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+    def require_login(view):
+        @functools.wraps(view)
+        def wrapped_view(**kwargs):
+            if not g.user:
+                return redirect(url_for('log_in'))
+            return view(**kwargs)
+        return wrapped_view
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('404.html'), 404
+
+    # Earlier views omitted
+
+    @app.route('/notes/<note_id>/edit')
+    @require_login
+    def note_update(note_id):
+        note = Note.query.filter_by(user_id=g.user.id, id=note_id).first_or_404()
+        return render_template('note_update.html', note=note)
+
+    return app
+```
+
+This is the first time that we've taken in user input in our routes, so we need to handle potential **404** errors if the object that the user is requesting doesn't exist, or they don't have access to it. In this case, we can search for a *Note*, with the proper *user_id*, and id using the `first_or_404` feature of *Flask-SQLAlchemy*. By using this, if the object is not found, then we'll stop processing the current view and instead abort with a **404** error. To make that fit with our application, we created another view called `page_not_found`, and registered it as the `errorhandler` for **404** errors thrown by our application.
+
+Let's take a look at the template that we're rendering now:
+
+```html
+<!--templates/note_update.html-->
+
+{% extends 'base.html' %}
+
+{% block content %}
+
+  <h1 class="is-size-3">Edit Note: {{ note.title }}</h1>
+
+  <form action="{{ url_for('note_update', note_id=note.id) }}" method="PATCH">
+    <div class="field">
+      <label class="label" for="title">Title</label>
+      <div class="control">
+        <input name="title" value="{{ request.form['title'] or note.title }}" class="input"></input>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="body">Body (Supports Markdown)</label>
+      <div class="control">
+        <textarea name="body" class="textarea has-text-monospaced">{{ request.form['body'] or note.body }}</textarea>
+      </div>
+    </div>
+
+    <div class="field is-grouped">
+      <div class="control">
+        <input type="submit" value="Update Note" class="button is-primary" />
+      </div>
+      <div class="control">
+        <a href="{{ url_for('note_index') }}" class="button is-text">Cancel</a>
+      </div>
+    </div>
+  </form>
+
+{% endblock %}
+```
+
+This form is almost exactly like the creation form, but we needed to change the method to **PATCH**. We could potentially be doing a partial update to a note when we submit the form. The action also had to change, and this is a good opportunity to look at how `url_for` works when we have an argument in the URL. Lastly, we're setting the values of the title's *input* and the body's *textarea* to be either the value from the request or the existing value on the *note* variable. We're using this approach so that the user doesn't lose all of their edits if there is a validation error when we go to handle the update. Nobody wants to have to start over when there's a form error.
+
+Let's go ahead and implement the update handling now:
+
+```python
+# __init__.py:
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Earlier code omitted
+
+    @app.route('/notes/<note_id>/edit', methods=('GET', 'PATCH'))
+    @require_login
+    def note_update(note_id):
+        note = Note.query.filter_by(user_id=g.user.id, id=note_id).first_or_404()
+        if request.method == 'PATCH':
+            title = request.form['title']
+            body = request.form['body']
+            error = None
+
+            if not title:
+                error = 'Title is required.'
+
+            if not error:
+                note.title = title
+                note.body = body
+                db.session.add(note)
+                db.session.commit()
+                flash(f"Successfully updated note: '{title}'", 'success')
+                return redirect(url_for('note_index'))
+
+            flash(error, 'error')
+
+        return render_template('note_update.html', note=note)
+
+    return app
+```
+
+There's only one real big difference between what we're doing in this view and in the `note_create` view. We're reassigning the *title* and *body* on an existing Note before adding it to the list of updates to make, instead of creating a whole new object. Now when we go to our edit page and submit the form with differences, we can see that it's just sending us back to the edit page without changing anything and our URL has all of the contents of our form. What happened?
+
+While **PATCH** is the proper *HTTP* method to use when partially updating a model, it doesn't work in HTML form tags. In this case, we'll adjust the form to have a **POST** method instead and we'll change our view to handle GET, POST, and PATCH.
+
+[!IMPORTANT]
+> Be sure to change the method in templates/note_update.html to **POST** first.
+
+```python
+# __init__.py:
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Earlier code omitted
+
+    @app.route('/notes/<note_id>/edit', methods=('GET', 'POST', 'PATCH'))
+    @require_login
+    def note_update(note_id):
+        note = Note.query.filter_by(user_id=g.user.id, id=note_id).first_or_404()
+        if request.method in ['POST', 'PATCH']:
+            title = request.form['title']
+            body = request.form['body']
+            error = None
+
+            if not title:
+                error = 'Title is required.'
+
+            if not error:
+                note.title = title
+                note.body = body
+                db.session.add(note)
+                db.session.commit()
+                flash(f"Successfully updated note: '{title}'", 'success')
+                return redirect(url_for('note_index'))
+
+            flash(error, 'error')
+
+        return render_template('note_update.html', note=note)
+
+    return app
+```
+
+Now if we refresh the edit page so that the HTML changes and then we submit some changes we should see them happen as expected. We're supporting both **POST** and **PATCH** because it's the right thing to do.
+
+#### Deleting a Note
+
+The last thing that we're going to do is handle the deleting of a note. To do this, we're going to have a view for both **GET** and **DELETE**, without a template. We will utilize `first_or_404` again, and then once we have the note we'll use `db.session.delete(note)` to get rid of it before redirecting back to the note *index* page. Let's add the code now:
+
+```python
+# __init__.py:
+
+# Imports omitted
+
+def create_app(test_config=None):
+    # Earlier code omitted
+
+    @app.route('/notes/<note_id>/delete', methods=('GET', 'DELETE'))
+    @require_login
+    def note_delete(note_id):
+        note = Note.query.filter_by(user_id=g.user.id, id=note_id).first_or_404()
+        db.session.delete(note)
+        db.session.commit()
+        flash(f"Successfully deleted note: '{note.title}'", 'success')
+        return redirect(url_for('note_index'))
+
+    return app
+```
+
+We should edit the delete links within *note_index.html* to use `url_for('note_delete', note_id=note.id)`, and then we'll be able to delete a note from the note *index* page.
+
+We've successfully implemented all of the **CRUD** functionality for our notes and now we have a working application. There's more we could do to improve security and add additional functionality, but this project has done a good job of showing us how web development in general works, and some of the things that we have to consider when writing web-based applications.
+
+### Organizing Flask Apps with Blueprints
