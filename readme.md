@@ -3699,3 +3699,177 @@ We should edit the delete links within *note_index.html* to use `url_for('note_d
 We've successfully implemented all of the **CRUD** functionality for our notes and now we have a working application. There's more we could do to improve security and add additional functionality, but this project has done a good job of showing us how web development in general works, and some of the things that we have to consider when writing web-based applications.
 
 ### Organizing Flask Apps with Blueprints
+
+There are some rumors about the **flask** that it is a microframework that is just intender for small applications and not really big servers.
+
+- First of all microframework does not mean that it is intended for big applications, it just mean that it only contains bare minimum for framework to work and actually this is very good because we can write smaller applications that only contains what we need.
+  But what about those extra functionality that come with bigger frameworks that come with bigger frameworks? am I to implement them myself?
+  fortunately the answer is no, since **flask** is getting more and more popularity there are tons of packages for it that do almost anything required for a web application (as you see in case of Flask-SQLAlchemy or Flask-Migrate)
+- Second reason behind this rumores is the way that we learn the flask.
+  writing everything in a single file (either `__init__.py` or `app.py`) somehow force us to use **flask** for smaller applications.
+  but this is not the only way or even the best way to write an application. putting all the logic of the application into a single file make that single file so complicated and hard to manage.
+  fortunately there is very easy to use way to handle this in flask called **blueprint**
+
+#### What is a blueprint
+
+Good software is organized by separation of concerns. It's easy to think of an application as a single entity, yet reality shows us that well-structured apps are collections of standalone modules, services, or classes. I'm referring to the **Single-responsibility** principal: a commonly understood concept where each piece of an application should be limited to handling no more than a single responsibility. It's the same reason why bathrooms and kitchens are separate rooms: one room is for shitting, and one room is for eating. It's a mess to shit where you eat, which is precisely what happens when building applications without structure or encapsulation.
+
+We can organize our **Flask** apps via a built-in concept called **Blueprints**, which are essentially the **Flask** equivalent of Python modules. **Blueprints** are intended to encapsulate feature-sized sections of our application, such as checkout flows, user auth, user profiles, etc. **Blueprints** keep related logic and assets grouped and separated from one another, which is essential to designing a maintainable project. **Blueprints** also enable performance benefits associated with code-splitting, similar to Webpack.
+
+#### Conventional Flask Structure
+
+The best way to get a glance at the benefits associated with using Blueprints is to see the effect they have on an app’s structure. First, let’s look at what a large app might look like without Blueprints.
+
+Our *notes* application so far look something like this
+
+```shell
+/myapp
+├── /templates
+├── /static
+├── __init__.py
+├── models.py
+├── config.py
+└── requirements.txt
+```
+
+Our application is not that big yet, and for simple applications like that this structure is not that bad. Actually it may be the best way to go, since it is easy to understand and write the code. But as we add more features to out applications this may not be the best way to write the code.
+
+Now with blueprints we can write it as:
+
+```shell
+/notes
+├── /application
+│   ├── __init__.py
+│   ├── assets.py
+│   ├── api.py
+│   ├── /auth
+│   │   ├── /templates
+│   │   ├── /static
+│   │   └── auth.py
+│   ├── /home
+│   │   ├── /templates
+│   │   ├── /static
+│   │   └── home.py
+│   ├── /profile
+│   │   ├── /templates
+│   │   ├── /static
+│   │   └── profile.py
+│   ├── /static
+│   └── /templates
+├── README.md
+├── config.py
+├── requirements.txt
+└── __init__.py
+```
+
+Unlike previous application we can easily indicate different parts of the application in a single view and easily deply and test different parts of the application. You can even have different persons to work on different parts of the application.
+
+A substantial benefit of blueprints is the ability to separate page templates and static assets into blueprint-specific */templates* and */static* folders. Now our landing page won't find itself loading irrelevant CSS, which pertains to product pages, and vice versa.
+
+An important thing to point out is the presence of top-level */templates* and */static* folders in addition to their blueprint-specific equivalents. While blueprints cannot access the templates or static files of their peers, they can utilize common assets to be shared across all blueprints (such as a *layout.html* template, or a general *style.css* file that applies to all parts of our app). We'll dig into how assets and blueprints work together, but let's start by defining our first blueprint.
+
+#### Defining a Blueprint
+
+We start with home blueprint, this is actually same as what we do till now.
+
+```python
+# home/home.py
+
+from flask import Blueprint
+from flask import current_app as app
+
+# blueprint configuration
+home_bp = Blueprint('home_bp', __name__,
+                    template_folder='templates',
+                    static_folder='static')
+```
+
+We're configuring our Blueprint as a variable named `home_bp`. The first parameter we pass to `Blueprint()` is the name we want to assign to our `Blueprint` for Flask's internal routing purposes. It makes sense to keep things consistent by naming our Blueprint `home_bp` to stay consistent with our variable name.
+
+We also pass two optional keyword arguments called `template_folder` and `static_folder`. Defining these arguments tells our blueprint that we'll have blueprint-specific templates and static files. These directories are resolved in relation to the current file, thus registering our blueprint's template and static directories as *application/home/templates* and *application/home/static*, respectively.
+
+Setting `static_folder` mimics the behavior of setting `template_folder`, except for serving static assets.
+
+```python
+# home/home.py
+
+from flask import Blueprint
+from flask import current_app as app
+
+# blueprint configuration
+home_bp = Blueprint('home_bp', __name__,
+                    template_folder='templates',
+                    static_folder='static')
+
+@home_bp.route('/', methods=['GET'])
+def home():
+    return 'OK'
+```
+
+The only notable difference here is that we now register our route by using `@home_bp.route('...')` instead of `@app.route('...')`. Creating our `home_bp` **Blueprint** automatically gives us a decorator function called `@home_bp` with which we can register our routes to.
+
+#### Registering Our Blueprint
+
+We've created a **Blueprint** and registered our first route to it, but how do we tell our Flask app that this blueprint and its routes exist?
+
+This is where we break into our top-level entry point, like `__init__.py` in the Flask application factory pattern. Here's the simplest example of registering a Blueprint using this pattern:
+
+```python
+# __init__.py
+import os
+from flask import Flask
+from flask_migrate import Migrate
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', default='dev')
+    )
+
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
+
+    from .models import db
+    db.init_app(app)
+
+    # setup migrations
+    migrate = Migrate(app, db)
+
+    from .home import home
+    app.register_blueprint(home.home_bp)
+
+    return app
+```
+
+We can define and register rest of the blueprints just like that.
+
+#### Jinja Templates Routing with Blueprints
+
+A caveat we need to be aware of is how *Jinja* templates find URLs for routes registered to **Blueprints**. Let's say we want to create a link to our app's homepage. In an app without blueprints, you'd find the route for our homepage using the following:
+
+```html
+<!-- index.html -->
+
+<a href="{{ url_for('home') }}">Home</a>
+```
+
+This looks for a route named home registered directly to our `app`, but in our case, we don't have routes registered to our `app`. In our app, we don't register routes directly to the Flask app — we've registered them to blueprints instead.
+
+This is where the `home_bp` part of `home_bp = Blueprint('home_bp')` comes into play: the string `home_bp` we passed into our blueprint is the internal name Flask uses to resolve routes with! Now we can find our homepage by doing the following:
+
+```html
+<!-- index.html -->
+
+<a href="{{ url_for('home_bp.home') }}">Home</a>
+```
+
+#### Jinja Blueprint Extras
+
+Since *Jinja* is contextually aware of blueprints, we can use a few cool tags to verify where we are in our app. Here are some useful tools to demonstrate how powerful *Jinja* is when it comes to knowing each page template's context:  
+
+`{{ request.blueprint }}`: Output the blueprint name that the current page template belongs to.
+`{{ self._TemplateReference__context.name }}`: Renders the file name of the current page template.
+`{{ request.endpoint }}`: Outputs both the name of the current blueprint as well as the name of the route which served the page template.
+`{{ request.path }}`: The URL of the current page template.
