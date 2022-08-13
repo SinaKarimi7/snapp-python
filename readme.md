@@ -137,13 +137,13 @@ Git is a Distributed Version Control Systems(DVCS) to records changes to a file 
 
 ### Useful commands
 
-[git clone](https://git-scm.com/docs/git-clone): Clone a git repository to local file system.
-[git pull](https://git-scm.com/docs/git-pull): Get changes from the server and merge them with your local copy.
-[git status](https://git-scm.com/docs/git-status): Show the working tree status.
-[git checkout](https://git-scm.com/docs/git-checkout): Switch branches or restore working tree files.
-[git add](https://git-scm.com/docs/git-add): This command updates the index using the current content found in the working tree, to prepare the content staged for the next commit.
-[git commit](https://git-scm.com/docs/git-commit): Commit your changes to local git repository.
-[git push](https://git-scm.com/docs/git-push): Update remote refs along with associated objects.
+- [`git clone`](https://git-scm.com/docs/git-clone): Clone a git repository to local file system.
+- [`git pull`](https://git-scm.com/docs/git-pull): Get changes from the server and merge them with your local copy.
+- [`git status`](https://git-scm.com/docs/git-status): Show the working tree status.
+- [`git checkout`](https://git-scm.com/docs/git-checkout): Switch branches or restore working tree files.
+- [`git add`](https://git-scm.com/docs/git-add): This command updates the index using the current content found in the working tree, to prepare the content staged for the next commit.
+- [`git commit`](https://git-scm.com/docs/git-commit): Commit your changes to local git repository.
+- [`git push`](https://git-scm.com/docs/git-push): Update remote refs along with associated objects.
 
 ## Basics of programming
 
