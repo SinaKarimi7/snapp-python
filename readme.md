@@ -11,7 +11,7 @@ Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-L
 ```
 
 > [!IMPORTANT]
-> This command require administrative priviledge
+> This command require administrative privileges
 
 ### How install Ubuntu
 
@@ -135,7 +135,7 @@ To exit the REPL, we can either type `exit()` (the parentheses are important) or
 
 Git is a Distributed Version Control Systems(DVCS) to records changes to a file or set of files over time so that you can recall specific versions later.
 
-### Usefull commands
+### Useful commands
 
 [git clone](https://git-scm.com/docs/git-clone): Clone a git repository to local file system.
 [git pull](https://git-scm.com/docs/git-pull): Get changes from the server and merge them with your local copy.
@@ -410,7 +410,7 @@ In case of immutable objects, even when we think we have changed the object, act
 140168663441960
 ```
 
-One last thing to remember is that if we assign a variable with another variable it will be assigned to the result of the variable and not whatever that varible points to later.
+One last thing to remember is that if we assign a variable with another variable it will be assigned to the result of the variable and not whatever that variable points to later.
 
 ```python
 >>> my_str = 1
@@ -1260,7 +1260,7 @@ SyntaxError: positional argument follows keyword argument
 
 When we're using position and keyword arguments, every argument after the first keyword argument must also be a keyword argument. It's sometimes useful to mix them, but often times we'll use either all positional or all keyword.
 
-Somethimes you don't want a variable to accidentally assigned a value(or simply can't), for example in our *contact_card* function we may want to have a *format* argument that user can only pass it by name.
+Sometimes you don't want a variable to accidentally assigned a value(or simply can't), for example in our *contact_card* function we may want to have a *format* argument that user can only pass it by name.
 
 ```python
 >>> def contact_card(name, age, car_model, *, format):
@@ -2055,7 +2055,7 @@ Before we can read from our *file* we need it to have some content. There are a 
 my_file = open('names.txt', 'w+')
 my_file.write('Nelson Mandela\n')
 my_file.write('Albert Einstein\n')
-my_file.write('Thoma Edison\n')
+my_file.write('Thomas Edison\n')
 my_file.writelines([
     'Mahatma Gandhi',
     'Aristotle',
@@ -2070,7 +2070,7 @@ $ python3.7 using_files.py
 $ cat names.txt
 Nelson Mandela
 Albert Einstein
-Thoma Edison
+Thomas Edison
 Mahatma GandhiAristotleLeonardo da Vinci
 $
 ```
@@ -2089,7 +2089,7 @@ Now that we have some content in the file, let's close it within the script, and
 my_file = open('names.txt', 'w+', newline='\n')
 my_file.write('Nelson Mandela\n')
 my_file.write('Albert Einstein\n')
-my_file.write('Thoma Edison\n')
+my_file.write('Thomas Edison\n')
 my_file.writelines([
     'Mahatma Gandhi',
     'Aristotle',
@@ -2108,7 +2108,7 @@ Now we can run the script again to see what happens:
 $ python3.7 using_files.py
 Nelson Mandela
 Albert Einstein
-Thoma Edison
+Thomas Edison
 Mahatma Gandhi
 Aristotle
 Leonardo da Vinci
@@ -2132,7 +2132,7 @@ Let's rewrite our existing code to utilize the with statement:
 with open('names.txt', 'w+') as my_file:
     my_file.write('Nelson Mandela\n')
     my_file.write('Albert Einstein\n')
-    my_file.write('Thoma Edison\n')
+    my_file.write('Thomas Edison\n')
     my_file.writelines([
         'Mahatma Gandhi',
         'Aristotle',
